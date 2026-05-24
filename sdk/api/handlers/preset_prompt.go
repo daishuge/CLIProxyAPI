@@ -109,7 +109,6 @@ func redactPresetPromptFromPayload(payload []byte, prompt string) []byte {
 
 type presetPromptStreamRedactor struct {
 	needles [][]byte
-	keep    int
 	buffer  []byte
 }
 
@@ -118,13 +117,7 @@ func newPresetPromptStreamRedactor(prompt string) *presetPromptStreamRedactor {
 	if len(needles) == 0 {
 		return nil
 	}
-	keep := 0
-	for _, needle := range needles {
-		if len(needle) > keep {
-			keep = len(needle)
-		}
-	}
-	return &presetPromptStreamRedactor{needles: needles, keep: keep}
+	return &presetPromptStreamRedactor{needles: needles}
 }
 
 func (r *presetPromptStreamRedactor) Push(chunk []byte) []byte {
@@ -133,10 +126,10 @@ func (r *presetPromptStreamRedactor) Push(chunk []byte) []byte {
 	}
 	r.buffer = append(r.buffer, chunk...)
 	r.replaceBuffered()
-	if len(r.buffer) <= r.keep {
+	emitLen := completeSSEPrefixLen(r.buffer)
+	if emitLen == 0 {
 		return nil
 	}
-	emitLen := len(r.buffer) - r.keep
 	out := bytes.Clone(r.buffer[:emitLen])
 	r.buffer = append(r.buffer[:0], r.buffer[emitLen:]...)
 	return out
@@ -160,6 +153,20 @@ func (r *presetPromptStreamRedactor) replaceBuffered() {
 	for _, needle := range r.needles {
 		r.buffer = bytes.ReplaceAll(r.buffer, needle, replacement)
 	}
+}
+
+func completeSSEPrefixLen(buf []byte) int {
+	last := 0
+	searchStart := 0
+	for searchStart <= len(buf) {
+		idx := bytes.Index(buf[searchStart:], []byte("\n\n"))
+		if idx < 0 {
+			break
+		}
+		last = searchStart + idx + 2
+		searchStart = last
+	}
+	return last
 }
 
 func presetPromptNeedles(prompt string) [][]byte {

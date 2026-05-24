@@ -367,6 +367,42 @@ func TestPresetPromptRedactsStreamingResponseLeakAcrossChunks(t *testing.T) {
 	}
 }
 
+func TestPresetPromptStreamRedactorKeepsJSONFrameWhole(t *testing.T) {
+	executor := &presetPromptCaptureExecutor{
+		provider: "preset-prompt-stream-frame",
+		streamChunks: []coreexecutor.StreamChunk{
+			{Payload: []byte(`data: {"choices":[{"delta":{"content":"H`)}},
+			{Payload: []byte(`ello"}}]}` + "\n\n")},
+		},
+	}
+	handler, model := newPresetPromptTestHandler(t, executor, sdkconfig.PresetPromptConfig{
+		Enabled: true,
+		Prompt:  presetPromptTestMarker,
+	})
+	body := []byte(fmt.Sprintf(`{"model":%q,"stream":true,"messages":[{"role":"user","content":"hello"}]}`, model))
+
+	data, _, errs := handler.ExecuteStreamWithAuthManager(context.Background(), "openai", model, body, "")
+	var chunks [][]byte
+	for chunk := range data {
+		chunks = append(chunks, bytes.Clone(chunk))
+	}
+	for errMsg := range errs {
+		if errMsg != nil {
+			t.Fatalf("unexpected stream error: %+v", errMsg)
+		}
+	}
+	if len(chunks) != 1 {
+		t.Fatalf("stream chunks = %d, want 1 complete frame: %q", len(chunks), chunks)
+	}
+	payload := strings.TrimSpace(string(bytes.TrimPrefix(bytes.TrimSpace(chunks[0]), []byte("data:"))))
+	if !gjson.Valid(payload) {
+		t.Fatalf("redactor emitted invalid JSON frame: %q", chunks[0])
+	}
+	if got := gjson.Get(payload, "choices.0.delta.content").String(); got != "Hello" {
+		t.Fatalf("content = %q, want Hello; frame=%s", got, chunks[0])
+	}
+}
+
 func TestPresetPromptDoesNotMutateCountRequests(t *testing.T) {
 	executor := &presetPromptCaptureExecutor{provider: "preset-prompt-count"}
 	handler, model := newPresetPromptTestHandler(t, executor, sdkconfig.PresetPromptConfig{
