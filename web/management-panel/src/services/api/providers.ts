@@ -217,20 +217,20 @@ export const providersApi = {
     apiClient.delete(`/vertex-api-key${buildProviderDeleteQuery(apiKey, baseUrl)}`),
 
   async getOpenAIProviders(): Promise<OpenAIProviderConfig[]> {
-    const data = await apiClient.get('/openai-compatibility');
-    const list = extractArrayPayload(data, 'openai-compatibility');
+    const data = await apiClient.get('/custom-upstreams');
+    const list = extractArrayPayload(data, 'custom-upstreams');
     return list.map((item) => normalizeOpenAIProvider(item)).filter(Boolean) as OpenAIProviderConfig[];
   },
 
   saveOpenAIProviders: (providers: OpenAIProviderConfig[]) =>
-    apiClient.put('/openai-compatibility', providers.map((item) => serializeOpenAIProvider(item))),
+    apiClient.put('/custom-upstreams', providers.map((item) => serializeOpenAIProvider(item))),
 
   updateOpenAIProvider: (index: number, value: OpenAIProviderConfig) =>
-    apiClient.patch('/openai-compatibility', { index, value: serializeOpenAIProvider(value) }),
+    apiClient.patch('/custom-upstreams', { index, value: serializeOpenAIProvider(value) }),
 
   updateOpenAIProviderDisabled: (index: number, disabled: boolean) =>
-    apiClient.patch('/openai-compatibility', { index, value: { disabled } }),
+    apiClient.patch('/custom-upstreams', { index, value: { disabled } }),
 
   deleteOpenAIProvider: (name: string) =>
-    apiClient.delete(`/openai-compatibility?name=${encodeURIComponent(name)}`)
+    apiClient.delete(`/custom-upstreams?name=${encodeURIComponent(name)}`)
 };

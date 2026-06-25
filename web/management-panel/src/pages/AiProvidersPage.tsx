@@ -111,8 +111,8 @@ export function AiProvidersPage() {
 
       if (openaiResult.status === 'fulfilled') {
         setOpenaiProviders(openaiResult.value || []);
-        updateConfigValue('openai-compatibility', openaiResult.value || []);
-        clearCache('openai-compatibility');
+        updateConfigValue('custom-upstreams', openaiResult.value || []);
+        clearCache('custom-upstreams');
       }
     } catch (err: unknown) {
       const message = getErrorMessage(err) || t('notification.refresh_failed');
@@ -303,8 +303,8 @@ export function AiProvidersPage() {
     const nextList = previousList.map((item, idx) => (idx === index ? nextItem : item));
 
     setOpenaiProviders(nextList);
-    updateConfigValue('openai-compatibility', nextList);
-    clearCache('openai-compatibility');
+    updateConfigValue('custom-upstreams', nextList);
+    clearCache('custom-upstreams');
 
     try {
       await providersApi.updateOpenAIProviderDisabled(index, !enabled);
@@ -315,8 +315,8 @@ export function AiProvidersPage() {
     } catch (err: unknown) {
       const message = getErrorMessage(err);
       setOpenaiProviders(previousList);
-      updateConfigValue('openai-compatibility', previousList);
-      clearCache('openai-compatibility');
+      updateConfigValue('custom-upstreams', previousList);
+      clearCache('custom-upstreams');
       showNotification(`${t('notification.update_failed')}: ${message}`, 'error');
     } finally {
       setConfigSwitchingKey(null);
@@ -394,8 +394,8 @@ export function AiProvidersPage() {
           await providersApi.deleteOpenAIProvider(entry.name);
           const next = openaiProviders.filter((_, idx) => idx !== index);
           setOpenaiProviders(next);
-          updateConfigValue('openai-compatibility', next);
-          clearCache('openai-compatibility');
+          updateConfigValue('custom-upstreams', next);
+          clearCache('custom-upstreams');
           showNotification(t('notification.openai_provider_deleted'), 'success');
         } catch (err: unknown) {
           const message = getErrorMessage(err);

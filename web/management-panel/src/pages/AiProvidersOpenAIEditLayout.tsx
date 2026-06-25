@@ -149,13 +149,14 @@ export function AiProvidersOpenAIEditLayout() {
   const config = useConfigStore((state) => state.config);
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
+  const clearCache = useConfigStore((state) => state.clearCache);
   const isCacheValid = useConfigStore((state) => state.isCacheValid);
 
   const [providers, setProviders] = useState<OpenAIProviderConfig[]>(
     () => config?.openaiCompatibility ?? []
   );
   const [loading, setLoading] = useState(
-    () => !isCacheValid('openai-compatibility')
+    () => !isCacheValid('custom-upstreams')
   );
   const [saving, setSaving] = useState(false);
 
@@ -254,7 +255,7 @@ export function AiProvidersOpenAIEditLayout() {
 
   useEffect(() => {
     let cancelled = false;
-    const hasValidCache = isCacheValid('openai-compatibility');
+    const hasValidCache = isCacheValid('custom-upstreams');
     if (!hasValidCache) {
       setLoading(true);
     }
@@ -265,12 +266,12 @@ export function AiProvidersOpenAIEditLayout() {
         if (cancelled) return;
         const nextProviders = value || [];
         setProviders(nextProviders);
-        updateConfigValue('openai-compatibility', nextProviders);
+        updateConfigValue('custom-upstreams', nextProviders);
       })
       .catch(async (err: unknown) => {
         if (cancelled) return;
         try {
-          const fallback = await fetchConfig('openai-compatibility');
+          const fallback = await fetchConfig('custom-upstreams');
           if (cancelled) return;
           setProviders(Array.isArray(fallback) ? (fallback as OpenAIProviderConfig[]) : []);
         } catch {
@@ -501,7 +502,8 @@ export function AiProvidersOpenAIEditLayout() {
       }
 
       setProviders(syncedProviders);
-      updateConfigValue('openai-compatibility', syncedProviders);
+      updateConfigValue('custom-upstreams', syncedProviders);
+      clearCache('custom-upstreams');
       showNotification(
         editIndex !== null
           ? t('notification.openai_provider_updated')
@@ -518,6 +520,7 @@ export function AiProvidersOpenAIEditLayout() {
     }
   }, [
     allowNextNavigation,
+    clearCache,
     draftKey,
     editIndex,
     form,

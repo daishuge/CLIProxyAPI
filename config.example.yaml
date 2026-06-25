@@ -290,7 +290,8 @@ nonstream-keepalive-interval: 0
 #   user-agent: "codex_cli_rs/0.114.0 (Mac OS 14.2.0; x86_64) vscode/1.111.0"
 #   beta-features: "multi_agent"
 
-# OpenAI compatibility providers
+# Custom upstreams for OpenAI-compatible providers. Multiple entries and multiple keys per entry are supported.
+# The config key remains openai-compatibility for existing deployments; the management API also exposes it as custom-upstreams.
 # openai-compatibility:
 #   - name: "openrouter" # The name of the provider; it will be used in the user agent and other places.
 #     disabled: false # optional: set to true to disable this provider without removing it
@@ -320,6 +321,15 @@ nonstream-keepalive-interval: 0
 #         alias: "claude-opus-4.66"
 #       - name: "kimi-k2.5"
 #         alias: "claude-opus-4.66"
+#   - name: "opencode-go"
+#     base-url: "https://opencode.ai/zen/go/v1" # OpenCode Go subscription endpoint; plain /zen/v1 is pay-as-you-go.
+#     headers:
+#       User-Agent: "PlayfulProxyAPI/6"
+#     api-key-entries:
+#       - api-key: "sk-..."
+#     models:
+#       - name: "deepseek-v4-pro"
+#         alias: "opencode-go/deepseek-v4-pro"
 
 # Vertex API keys (Vertex-compatible endpoints, base-url is optional)
 # vertex-api-key:

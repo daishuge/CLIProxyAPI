@@ -52,6 +52,7 @@ export type RawConfigSection =
   | 'claude-api-key'
   | 'vertex-api-key'
   | 'openai-compatibility'
+  | 'custom-upstreams'
   | 'oauth-excluded-models';
 
 export interface ConfigCache {

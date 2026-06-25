@@ -29,6 +29,8 @@ const (
 	DefaultConversationLogEntryBytes = 2 * 1024 * 1024
 	DefaultPresetPromptMaxBytes      = 32 * 1024
 	PresetPromptHardMaxBytes         = 256 * 1024
+	customUpstreamsConfigKey         = "custom-upstreams"
+	openAICompatibilityConfigKey     = "openai-compatibility"
 )
 
 // Config represents the application's configuration, loaded from a YAML file.
@@ -143,6 +145,8 @@ type Config struct {
 
 	// OpenAICompatibility defines OpenAI API compatibility configurations for external providers.
 	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
+	// CustomUpstreams exposes the same pool under its management-facing name.
+	CustomUpstreams []OpenAICompatibility `yaml:"-" json:"custom-upstreams,omitempty"`
 
 	// VertexCompatAPIKey defines Vertex AI-compatible API key configurations for third-party providers.
 	// Used for services that use Vertex AI-style paths but with simple API key authentication.
@@ -857,6 +861,13 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	var customUpstreamAlias struct {
+		CustomUpstreams []OpenAICompatibility `yaml:"custom-upstreams"`
+	}
+	if errAlias := yaml.Unmarshal(data, &customUpstreamAlias); errAlias == nil && len(customUpstreamAlias.CustomUpstreams) > 0 {
+		cfg.mergeCustomUpstreams(customUpstreamAlias.CustomUpstreams)
+	}
+
 	// NOTE: Startup legacy key migration is intentionally disabled.
 	// Reason: avoid mutating config.yaml during server startup.
 	// Re-enable the block below if automatic startup migration is needed again.
@@ -956,6 +967,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 
 	// Sanitize OpenAI compatibility providers: drop entries without base-url
 	cfg.SanitizeOpenAICompatibility()
+	cfg.CustomUpstreams = append([]OpenAICompatibility(nil), cfg.OpenAICompatibility...)
 
 	// Normalize OAuth provider model exclusion map.
 	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
@@ -1106,7 +1118,11 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 // not actionable, specifically those missing a BaseURL. It trims whitespace before
 // evaluation and preserves the relative order of remaining entries.
 func (cfg *Config) SanitizeOpenAICompatibility() {
-	if cfg == nil || len(cfg.OpenAICompatibility) == 0 {
+	if cfg == nil {
+		return
+	}
+	if len(cfg.OpenAICompatibility) == 0 {
+		cfg.CustomUpstreams = nil
 		return
 	}
 	out := make([]OpenAICompatibility, 0, len(cfg.OpenAICompatibility))
@@ -1123,6 +1139,44 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 		out = append(out, e)
 	}
 	cfg.OpenAICompatibility = out
+	cfg.CustomUpstreams = append([]OpenAICompatibility(nil), out...)
+}
+
+func (cfg *Config) mergeCustomUpstreams(entries []OpenAICompatibility) {
+	if cfg == nil || len(entries) == 0 {
+		return
+	}
+	merged := append([]OpenAICompatibility(nil), cfg.OpenAICompatibility...)
+	for _, entry := range entries {
+		entry.Name = strings.TrimSpace(entry.Name)
+		entry.BaseURL = strings.TrimSpace(entry.BaseURL)
+		if entry.BaseURL == "" {
+			continue
+		}
+		idx := findOpenAICompatibilityIndex(merged, entry.Name, entry.BaseURL)
+		if idx >= 0 {
+			merged[idx] = entry
+			continue
+		}
+		merged = append(merged, entry)
+	}
+	cfg.OpenAICompatibility = merged
+}
+
+func findOpenAICompatibilityIndex(entries []OpenAICompatibility, name, baseURL string) int {
+	name = strings.TrimSpace(name)
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	for i := range entries {
+		entryName := strings.TrimSpace(entries[i].Name)
+		entryBaseURL := strings.TrimRight(strings.TrimSpace(entries[i].BaseURL), "/")
+		if name != "" && strings.EqualFold(entryName, name) {
+			return i
+		}
+		if baseURL != "" && strings.EqualFold(entryBaseURL, baseURL) {
+			return i
+		}
+	}
+	return -1
 }
 
 // SanitizeCodexKeys removes Codex API key entries missing a BaseURL.
@@ -1327,6 +1381,10 @@ func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 	removeLegacyOpenAICompatAPIKeys(original.Content[0])
 	removeLegacyAmpKeys(original.Content[0])
 	removeLegacyGenerativeLanguageKeys(original.Content[0])
+	if findMapKeyIndex(original.Content[0], customUpstreamsConfigKey) >= 0 {
+		removeMapKey(original.Content[0], openAICompatibilityConfigKey)
+		renameMapKey(generated.Content[0], openAICompatibilityConfigKey, customUpstreamsConfigKey)
+	}
 
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-excluded-models")
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-model-alias")
@@ -1906,6 +1964,14 @@ func removeMapKey(mapNode *yaml.Node, key string) {
 			return
 		}
 	}
+}
+
+func renameMapKey(mapNode *yaml.Node, oldKey, newKey string) {
+	idx := findMapKeyIndex(mapNode, oldKey)
+	if idx < 0 || mapNode.Content[idx] == nil {
+		return
+	}
+	mapNode.Content[idx].Value = newKey
 }
 
 func pruneMappingToGeneratedKeys(dstRoot, srcRoot *yaml.Node, key string) {
