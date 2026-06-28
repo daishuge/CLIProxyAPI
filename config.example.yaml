@@ -30,7 +30,7 @@ remote-management:
   # disable-auto-update-panel: false
 
   # GitHub repository for the management control panel. Accepts a repository URL or releases API URL.
-  panel-github-repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
+  panel-github-repository: "https://github.com/daishuge/playful-proxy-api-panel"
 
 # Authentication directory (supports ~ for home directory)
 auth-dir: "~/.cli-proxy-api"
@@ -106,8 +106,8 @@ logging-to-file: false
 logs-max-total-size-mb: 0
 
 # Maximum number of error log files retained when request logging is disabled.
-# When exceeded, the oldest error log files are deleted. Default is 10. Set to 0 to disable cleanup.
-error-logs-max-files: 10
+# Set to 0 to keep error logs permanently.
+error-logs-max-files: 0
 
 # When false, disable in-memory usage statistics aggregation
 usage-statistics-enabled: false

@@ -30,6 +30,39 @@ const (
 	logCursorFingerprintMax = 4 * 1024
 )
 
+type logDataTarget string
+
+const (
+	logDataTargetApplication  logDataTarget = "application"
+	logDataTargetRequest      logDataTarget = "request"
+	logDataTargetErrorRequest logDataTarget = "error-request"
+	logDataTargetTemporary    logDataTarget = "temporary"
+	logDataTargetAll          logDataTarget = "all"
+)
+
+type logStorageBucket struct {
+	Size  int64 `json:"size"`
+	Files int   `json:"files"`
+}
+
+type logStorageSummary struct {
+	LogDirectory string           `json:"log-directory"`
+	TotalSize    int64            `json:"total-size"`
+	TotalFiles   int              `json:"total-files"`
+	Application  logStorageBucket `json:"application"`
+	Request      logStorageBucket `json:"request"`
+	ErrorRequest logStorageBucket `json:"error-request"`
+	Temporary    logStorageBucket `json:"temporary"`
+}
+
+type logClearResult struct {
+	Success     bool   `json:"success"`
+	Target      string `json:"target"`
+	Removed     int    `json:"removed"`
+	Truncated   int    `json:"truncated"`
+	ClearedSize int64  `json:"cleared-size"`
+}
+
 // GetLogs returns log lines with optional incremental loading.
 //
 // The legacy timestamp path keeps line-count as the total scanned line count for
@@ -131,18 +164,14 @@ func (h *Handler) GetLogs(c *gin.Context) {
 	writeLogsResponse(c, lines, total, latest, nextCursor, false)
 }
 
-// DeleteLogs removes all rotated log files and truncates the active log.
-func (h *Handler) DeleteLogs(c *gin.Context) {
+// GetLogStorage returns log file counts and sizes grouped by log type.
+func (h *Handler) GetLogStorage(c *gin.Context) {
 	if h == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
 		return
 	}
 	if h.cfg == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "configuration unavailable"})
-		return
-	}
-	if !h.cfg.LoggingToFile {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "logging to file disabled"})
 		return
 	}
 
@@ -152,44 +181,44 @@ func (h *Handler) DeleteLogs(c *gin.Context) {
 		return
 	}
 
-	entries, err := os.ReadDir(dir)
+	summary, err := collectLogStorage(dir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "log directory not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to list log directory: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to inspect log storage: %v", err)})
+		return
+	}
+	c.JSON(http.StatusOK, summary)
+}
+
+// DeleteLogs removes selected log data. The target query can be application,
+// request, error-request, temporary, or all. With no target it clears application logs.
+func (h *Handler) DeleteLogs(c *gin.Context) {
+	if h == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "handler unavailable"})
+		return
+	}
+	if h.cfg == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "configuration unavailable"})
 		return
 	}
 
-	removed := 0
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
-		fullPath := filepath.Join(dir, name)
-		if name == defaultLogFileName {
-			if errTrunc := os.Truncate(fullPath, 0); errTrunc != nil && !os.IsNotExist(errTrunc) {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to truncate log file: %v", errTrunc)})
-				return
-			}
-			continue
-		}
-		if isRotatedLogFile(name) {
-			if errRemove := os.Remove(fullPath); errRemove != nil && !os.IsNotExist(errRemove) {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to remove %s: %v", name, errRemove)})
-				return
-			}
-			removed++
-		}
+	dir := h.logDirectory()
+	if strings.TrimSpace(dir) == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "log directory not configured"})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Logs cleared successfully",
-		"removed": removed,
-	})
+	target, ok := parseLogDataTarget(c.Query("target"))
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid log clear target"})
+		return
+	}
+
+	result, err := clearLogData(dir, target)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to clear logs: %v", err)})
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // GetRequestErrorLogs lists error request log files when RequestLog is disabled.
@@ -442,6 +471,154 @@ func (h *Handler) collectLogFiles(dir string) ([]string, error) {
 		paths = append(paths, cands[i].path)
 	}
 	return paths, nil
+}
+
+func collectLogStorage(dir string) (logStorageSummary, error) {
+	cleanDir := filepath.Clean(strings.TrimSpace(dir))
+	summary := logStorageSummary{LogDirectory: cleanDir}
+	if cleanDir == "." || cleanDir == "" {
+		return summary, nil
+	}
+
+	entries, err := os.ReadDir(cleanDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return summary, nil
+		}
+		return summary, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, errInfo := entry.Info()
+		if errInfo != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		target := classifyLogFile(entry.Name())
+		if target == "" {
+			continue
+		}
+		addLogStorageBucket(&summary, target, info.Size())
+	}
+
+	return summary, nil
+}
+
+func addLogStorageBucket(summary *logStorageSummary, target logDataTarget, size int64) {
+	if summary == nil {
+		return
+	}
+	summary.TotalFiles++
+	summary.TotalSize += size
+	switch target {
+	case logDataTargetApplication:
+		summary.Application.Files++
+		summary.Application.Size += size
+	case logDataTargetRequest:
+		summary.Request.Files++
+		summary.Request.Size += size
+	case logDataTargetErrorRequest:
+		summary.ErrorRequest.Files++
+		summary.ErrorRequest.Size += size
+	case logDataTargetTemporary:
+		summary.Temporary.Files++
+		summary.Temporary.Size += size
+	}
+}
+
+func clearLogData(dir string, target logDataTarget) (logClearResult, error) {
+	result := logClearResult{Success: true, Target: string(target)}
+	cleanDir := filepath.Clean(strings.TrimSpace(dir))
+	if cleanDir == "." || cleanDir == "" {
+		return result, nil
+	}
+
+	entries, err := os.ReadDir(cleanDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return result, nil
+		}
+		return result, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		category := classifyLogFile(name)
+		if category == "" || !logTargetMatches(target, category) {
+			continue
+		}
+		info, errInfo := entry.Info()
+		if errInfo != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		fullPath := filepath.Join(cleanDir, name)
+		if category == logDataTargetApplication && name == defaultLogFileName {
+			if errTrunc := os.Truncate(fullPath, 0); errTrunc != nil && !os.IsNotExist(errTrunc) {
+				return result, fmt.Errorf("failed to truncate %s: %w", name, errTrunc)
+			}
+			result.Truncated++
+			result.ClearedSize += info.Size()
+			continue
+		}
+		if errRemove := os.Remove(fullPath); errRemove != nil && !os.IsNotExist(errRemove) {
+			return result, fmt.Errorf("failed to remove %s: %w", name, errRemove)
+		}
+		result.Removed++
+		result.ClearedSize += info.Size()
+	}
+
+	return result, nil
+}
+
+func parseLogDataTarget(raw string) (logDataTarget, bool) {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	if value == "" {
+		return logDataTargetApplication, true
+	}
+	target := logDataTarget(value)
+	switch target {
+	case logDataTargetApplication, logDataTargetRequest, logDataTargetErrorRequest, logDataTargetTemporary, logDataTargetAll:
+		return target, true
+	default:
+		return "", false
+	}
+}
+
+func logTargetMatches(target, category logDataTarget) bool {
+	return target == logDataTargetAll || target == category
+}
+
+func classifyLogFile(name string) logDataTarget {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return ""
+	}
+	if trimmed == defaultLogFileName || isRotatedLogFile(trimmed) {
+		return logDataTargetApplication
+	}
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "error-") && strings.HasSuffix(lower, ".log") {
+		return logDataTargetErrorRequest
+	}
+	if isTemporaryLogFile(lower) {
+		return logDataTargetTemporary
+	}
+	if strings.HasSuffix(lower, ".log") || strings.HasSuffix(lower, ".log.gz") {
+		return logDataTargetRequest
+	}
+	return ""
+}
+
+func isTemporaryLogFile(lower string) bool {
+	if !(strings.HasPrefix(lower, "request-body-") || strings.HasPrefix(lower, "response-body-")) {
+		return false
+	}
+	return strings.HasSuffix(lower, ".tmp")
 }
 
 type logAccumulator struct {

@@ -90,6 +90,26 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$updated_notes_file"
           fi
+      # Build the bundled management panel so the release ships a single-file management.html.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/management-panel/package-lock.json
+      - name: Build management panel
+        working-directory: web/management-panel
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          cp dist/index.html dist/management.html
+      - name: Upload management panel asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" web/management-panel/dist/management.html --clobber
 
   build-hosted:
     name: build ${{ matrix.target }}
