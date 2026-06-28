@@ -53,7 +53,7 @@ export function HealthPill() {
           {label}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{t("header.health_healthy") + " · /healthz"}</TooltipContent>
+      <TooltipContent>{label + " · /healthz"}</TooltipContent>
     </Tooltip>
   );
 }

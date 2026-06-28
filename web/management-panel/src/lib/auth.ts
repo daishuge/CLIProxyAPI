@@ -1,6 +1,11 @@
 import { create } from "zustand";
-import { fetchConfig } from "./api";
-import { setTokenProvider, setUnauthorizedHandler } from "./api";
+import {
+  ApiError,
+  resolveBaseUrl,
+  MANAGEMENT_PREFIX,
+  setTokenProvider,
+  setUnauthorizedHandler,
+} from "./api";
 
 /** localStorage key holding the management key. */
 export const MGMT_KEY_STORAGE = "ppap.mgmtKey";
@@ -19,6 +24,46 @@ function persistKey(key: string | null): void {
     else window.localStorage.removeItem(MGMT_KEY_STORAGE);
   } catch {
     // Storage may be unavailable (private mode); auth still works in-memory.
+  }
+}
+
+/**
+ * Probe an authenticated endpoint with a candidate key directly, bypassing the
+ * global token provider. This prevents background queries from picking up an
+ * unverified key and triggering spurious 401 logouts.
+ */
+async function probeWithKey(candidateKey: string): Promise<void> {
+  const url = `${resolveBaseUrl()}${MANAGEMENT_PREFIX}/config`;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Authorization: `Bearer ${candidateKey}` },
+    });
+  } catch {
+    throw new ApiError({
+      message: "Network request failed",
+      status: 0,
+      kind: "network",
+    });
+  }
+  if (!response.ok) {
+    let parsed: unknown;
+    try {
+      parsed = await response.json();
+    } catch {
+      // ignore
+    }
+    const msg: string =
+      parsed && typeof parsed === "object" && "message" in parsed && typeof (parsed as Record<string, unknown>).message === "string"
+        ? ((parsed as Record<string, string>).message as string)
+        : response.status === 401
+          ? "Invalid management key"
+          : `Probe failed with status ${response.status}`;
+    throw new ApiError({
+      message: msg,
+      status: response.status,
+      kind: response.status === 401 ? "unauthorized" : response.status >= 500 ? "server" : "unknown",
+    });
   }
 }
 
@@ -43,18 +88,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isAuthenticated: !!initialKey,
     login: async (key: string) => {
       const trimmed = key.trim();
-      // Temporarily expose the candidate key so the probe request is authorized.
-      set({ managementKey: trimmed });
-      try {
-        await fetchConfig();
-        persistKey(trimmed);
-        set({ isAuthenticated: true });
-      } catch (err) {
-        // Roll back to the previously persisted key on failure.
-        const previous = readStoredKey();
-        set({ managementKey: previous, isAuthenticated: !!previous });
-        throw err;
-      }
+      // Probe with the candidate key directly — the global token provider and
+      // unauthorized handler remain untouched, so background queries keep using
+      // the current (valid) key and won't trigger spurious 401 logouts.
+      await probeWithKey(trimmed);
+      persistKey(trimmed);
+      set({ managementKey: trimmed, isAuthenticated: true });
     },
     logout: () => {
       persistKey(null);
