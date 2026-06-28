@@ -5879,8 +5879,16 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 				current.Status = StatusError
 				current.StatusMessage = "unauthorized"
 			} else {
+				// Mark the auth unavailable for the refresh backoff window so the
+				// selector skips it until a retry is due, instead of routing live
+				// traffic to a credential whose refresh just failed.
 				current.NextRefreshAfter = now.Add(refreshFailureBackoff)
+				current.Unavailable = true
+				current.Status = StatusError
+				current.StatusMessage = "refresh failed"
+				current.NextRetryAfter = now.Add(refreshFailureBackoff)
 			}
+			current.UpdatedAt = now
 			m.auths[id] = current
 			shouldReschedule = true
 			if m.scheduler != nil {
@@ -5909,6 +5917,9 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 	if updated.Status == StatusError {
 		updated.Status = StatusActive
 	}
+	// Clear the PPAP per-key refresh-failure retry gate so the recovered
+	// credential becomes selectable again on the next select cycle.
+	updated.NextRetryAfter = time.Time{}
 	updated.UpdatedAt = now
 	modelsToResume := clearUnauthorizedModelStates(updated, now)
 	if m.shouldRefresh(updated, now) {

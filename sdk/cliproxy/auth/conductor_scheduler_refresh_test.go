@@ -45,6 +45,64 @@ func (e unauthorizedRefreshTestExecutor) Refresh(ctx context.Context, auth *Auth
 	return nil, errors.New("token refresh failed with status 401: invalid_grant")
 }
 
+// genericRefreshFailureTestExecutor fails refresh with a non-unauthorized error
+// to exercise the retry-backoff unavailability marking path.
+type genericRefreshFailureTestExecutor struct {
+	schedulerProviderTestExecutor
+}
+
+func (e genericRefreshFailureTestExecutor) Refresh(ctx context.Context, auth *Auth) (*Auth, error) {
+	return nil, errors.New("refresh failed")
+}
+
+func TestManagerRefreshAuthFailureMarksAuthUnavailableForRetry(t *testing.T) {
+	ctx := context.Background()
+	manager := NewManager(nil, &RoundRobinSelector{}, nil)
+	manager.SetRetryConfig(1, 10*time.Minute, 0)
+	manager.RegisterExecutor(genericRefreshFailureTestExecutor{
+		schedulerProviderTestExecutor: schedulerProviderTestExecutor{provider: "codex"},
+	})
+
+	model := "gpt-5.5-codex"
+	auth := &Auth{
+		ID:       "refresh-failure-auth",
+		Provider: "codex",
+		Status:   StatusActive,
+	}
+	registerSchedulerModels(t, "codex", model, auth.ID)
+	if _, errRegister := manager.Register(ctx, auth); errRegister != nil {
+		t.Fatalf("register auth: %v", errRegister)
+	}
+
+	manager.refreshAuth(ctx, auth.ID)
+
+	updated, ok := manager.GetByID(auth.ID)
+	if !ok || updated == nil {
+		t.Fatalf("expected auth to remain registered")
+	}
+	if !updated.Unavailable {
+		t.Fatalf("auth.Unavailable = false, want true")
+	}
+	if updated.Status != StatusError {
+		t.Fatalf("auth.Status = %q, want %q", updated.Status, StatusError)
+	}
+	if updated.NextRetryAfter.IsZero() {
+		t.Fatal("auth.NextRetryAfter = zero, want refresh failure cooldown")
+	}
+	if updated.NextRefreshAfter.IsZero() {
+		t.Fatal("auth.NextRefreshAfter = zero, want refresh retry backoff")
+	}
+
+	_, errPick := manager.scheduler.pickSingle(ctx, "codex", model, cliproxyexecutor.Options{}, nil)
+	if errPick == nil {
+		t.Fatal("pickSingle() error = nil, want cooldown/auth unavailable error")
+	}
+	wait, shouldRetry := manager.shouldRetryAfterError(errPick, 0, []string{"codex"}, model, 10*time.Minute)
+	if !shouldRetry || wait <= 0 {
+		t.Fatalf("shouldRetryAfterError() = (%v, %v), want positive retry wait", wait, shouldRetry)
+	}
+}
+
 func TestManager_RefreshAuthUnauthorizedFailureStopsAutoRefreshRetry(t *testing.T) {
 	ctx := context.Background()
 	manager := NewManager(nil, &RoundRobinSelector{}, nil)
