@@ -59,10 +59,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled ?? loading}
         {...props}
       >
-        {loading && !asChild ? (
-          <Loader2 className="animate-[ppap-spin_0.7s_linear_infinite]" />
-        ) : null}
-        {children}
+        {asChild ? children : (
+          <>
+            {loading && <Loader2 className="animate-[ppap-spin_0.7s_linear_infinite]" />}
+            {children}
+          </>
+        )}
       </Comp>
     );
   },
