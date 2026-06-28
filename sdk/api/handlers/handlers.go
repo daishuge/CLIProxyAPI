@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -294,6 +295,9 @@ type BaseAPIHandler struct {
 	presetPromptConfig config.PresetPromptConfig
 	// apiKeyControls holds per-client-key request-time controls.
 	apiKeyControls []config.APIKeyControl
+
+	conversationLogMu    sync.RWMutex
+	conversationLogStore *conversationlog.Store
 }
 
 // NewBaseAPIHandlers creates a new API handlers instance.

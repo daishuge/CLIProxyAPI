@@ -7,6 +7,7 @@ import (
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/clienterror"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
@@ -27,7 +28,16 @@ type pluginExecutorFormatResolver interface {
 // ExecuteWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
 func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
-	return h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "execute", modelName, rawJSON, false, alt)
+	payload, headers, errMsg := h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	if rec != nil {
+		if errMsg != nil {
+			rec.finishNonStream(nil, conversationResponseHeaders(ctx, errMsg.Addon), errMsg.StatusCode, errMsg.Error, reqMeta)
+		} else {
+			rec.finishNonStream(payload, conversationResponseHeaders(ctx, headers), http.StatusOK, nil, reqMeta)
+		}
+	}
+	return payload, headers, errMsg
 }
 
 // ExecuteImageWithAuthManager executes an OpenAI-compatible image endpoint request.
@@ -99,6 +109,7 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	}
 	executedReq, executedOpts := afterAuthCapture.apply(req, opts)
 	rawResponseHeaders := cloneHeader(resp.Headers)
+	logging.SetResponseHeaders(ctx, rawResponseHeaders)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, lifecycle.requestID(), responseProtocol, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
 	body = redactPresetPromptsFromPayload(body, presetRedactions)
@@ -112,7 +123,16 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 // ExecuteCountWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
 func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
-	return h.executeCountWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, modelExecutionOptions{})
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "count", modelName, rawJSON, false, alt)
+	payload, headers, errMsg := h.executeCountWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, modelExecutionOptions{})
+	if rec != nil {
+		if errMsg != nil {
+			rec.finishNonStream(nil, conversationResponseHeaders(ctx, errMsg.Addon), errMsg.StatusCode, errMsg.Error, reqMeta)
+		} else {
+			rec.finishNonStream(payload, conversationResponseHeaders(ctx, headers), http.StatusOK, nil, reqMeta)
+		}
+	}
+	return payload, headers, errMsg
 }
 
 func (h *BaseAPIHandler) executeCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string, execOptions modelExecutionOptions) ([]byte, http.Header, *interfaces.ErrorMessage) {
@@ -167,6 +187,7 @@ func (h *BaseAPIHandler) executeCountWithAuthManager(ctx context.Context, handle
 	}
 	executedReq, executedOpts := afterAuthCapture.apply(req, opts)
 	rawResponseHeaders := cloneHeader(resp.Headers)
+	logging.SetResponseHeaders(ctx, rawResponseHeaders)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, lifecycle.requestID(), handlerType, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
 	lifecycle.complete(pluginapi.RequestCompletionSucceeded, http.StatusOK, nil)

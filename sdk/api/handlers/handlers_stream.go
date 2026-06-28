@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v7/sdk/translator"
@@ -17,7 +18,13 @@ import (
 // This path is the only supported execution route.
 // The returned http.Header carries upstream response headers captured before streaming begins.
 func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
-	return h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "stream", modelName, rawJSON, true, alt)
+	data, headers, errs := h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	if rec == nil {
+		return data, headers, errs
+	}
+	loggedHeaders := conversationResponseHeaders(ctx, headers)
+	return teeConversationLogStream(ctx, rec, headers, loggedHeaders, reqMeta, data, errs)
 }
 
 // ExecuteImageStreamWithAuthManager executes a streaming OpenAI-compatible image endpoint request.
@@ -108,6 +115,7 @@ func (h *BaseAPIHandler) streamWithPluginExecutor(ctx context.Context, entryProt
 		}, execOptions.SkipInterceptorPluginID)
 		applyStreamHeaders(intercepted.Headers)
 	}
+	logging.SetResponseHeaders(ctx, rawStreamHeaders)
 	upstreamHeaders := downstreamHeadersAfterInterceptors(baseStreamHeaders, rawStreamHeaders, passthroughHeadersEnabled)
 	if upstreamHeaders == nil && (passthroughHeadersEnabled || streamInterceptorsActive) {
 		upstreamHeaders = make(http.Header)
@@ -563,6 +571,7 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 		}
 	}
 
+	logging.SetResponseHeaders(ctx, rawStreamHeaders)
 	upstreamHeaders := downstreamHeadersAfterInterceptors(baseStreamHeaders, rawStreamHeaders, passthroughHeadersEnabled)
 	if upstreamHeaders == nil && (passthroughHeadersEnabled || streamInterceptorsActive) {
 		upstreamHeaders = make(http.Header)
