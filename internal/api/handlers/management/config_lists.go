@@ -434,7 +434,22 @@ func (h *Handler) DeleteClaudeKey(c *gin.Context) {
 func (h *Handler) GetOpenAICompat(c *gin.Context) {
 	c.JSON(200, gin.H{"openai-compatibility": h.openAICompatibilityWithAuthIndex()})
 }
+
+// custom-upstreams is the management-facing name for the same OpenAI-compatible
+// upstream pool kept under openai-compatibility for config compatibility.
+func (h *Handler) GetCustomUpstreams(c *gin.Context) {
+	c.JSON(200, gin.H{"custom-upstreams": h.openAICompatibilityWithAuthIndex()})
+}
+
 func (h *Handler) PutOpenAICompat(c *gin.Context) {
+	h.putOpenAICompatibility(c)
+}
+
+func (h *Handler) PutCustomUpstreams(c *gin.Context) {
+	h.putOpenAICompatibility(c)
+}
+
+func (h *Handler) putOpenAICompatibility(c *gin.Context) {
 	data, err := c.GetRawData()
 	if err != nil {
 		c.JSON(400, gin.H{"error": "failed to read body"})
@@ -443,13 +458,25 @@ func (h *Handler) PutOpenAICompat(c *gin.Context) {
 	var arr []config.OpenAICompatibility
 	if err = json.Unmarshal(data, &arr); err != nil {
 		var obj struct {
-			Items []config.OpenAICompatibility `json:"items"`
+			Items               []config.OpenAICompatibility `json:"items"`
+			OpenAICompatibility []config.OpenAICompatibility `json:"openai-compatibility"`
+			CustomUpstreams     []config.OpenAICompatibility `json:"custom-upstreams"`
 		}
-		if err2 := json.Unmarshal(data, &obj); err2 != nil || len(obj.Items) == 0 {
+		if err2 := json.Unmarshal(data, &obj); err2 != nil {
 			c.JSON(400, gin.H{"error": "invalid body"})
 			return
 		}
-		arr = obj.Items
+		switch {
+		case len(obj.CustomUpstreams) > 0:
+			arr = obj.CustomUpstreams
+		case len(obj.OpenAICompatibility) > 0:
+			arr = obj.OpenAICompatibility
+		case len(obj.Items) > 0:
+			arr = obj.Items
+		default:
+			c.JSON(400, gin.H{"error": "invalid body"})
+			return
+		}
 	}
 	filtered := make([]config.OpenAICompatibility, 0, len(arr))
 	for i := range arr {
@@ -465,6 +492,14 @@ func (h *Handler) PutOpenAICompat(c *gin.Context) {
 	h.persistLocked(c)
 }
 func (h *Handler) PatchOpenAICompat(c *gin.Context) {
+	h.patchOpenAICompatibility(c)
+}
+
+func (h *Handler) PatchCustomUpstreams(c *gin.Context) {
+	h.patchOpenAICompatibility(c)
+}
+
+func (h *Handler) patchOpenAICompatibility(c *gin.Context) {
 	type openAICompatPatch struct {
 		Name          *string                             `json:"name"`
 		Prefix        *string                             `json:"prefix"`
@@ -540,6 +575,14 @@ func (h *Handler) PatchOpenAICompat(c *gin.Context) {
 }
 
 func (h *Handler) DeleteOpenAICompat(c *gin.Context) {
+	h.deleteOpenAICompatibility(c)
+}
+
+func (h *Handler) DeleteCustomUpstreams(c *gin.Context) {
+	h.deleteOpenAICompatibility(c)
+}
+
+func (h *Handler) deleteOpenAICompatibility(c *gin.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if name := c.Query("name"); name != "" {
