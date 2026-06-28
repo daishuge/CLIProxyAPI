@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/api"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	internalusage "github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -55,6 +58,7 @@ func (s *Service) Run(ctx context.Context) error {
 		forceHomeRuntimeConfig(s.cfg)
 		redisqueue.SetUsageStatisticsEnabled(true)
 	}
+	s.startUsageStatisticsPersistence(ctx)
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
@@ -345,9 +349,50 @@ func (s *Service) Shutdown(ctx context.Context) error {
 			}
 		}
 
+		if s.usageStatsStop != nil {
+			s.usageStatsStop()
+			s.usageStatsStop = nil
+		}
 		usage.StopDefault()
 	})
 	return shutdownErr
+}
+
+func (s *Service) startUsageStatisticsPersistence(ctx context.Context) {
+	if s == nil || s.cfg == nil {
+		return
+	}
+	internalusage.SetStatisticsEnabled(s.cfg.UsageStatisticsEnabled)
+	if !s.cfg.UsageStatisticsEnabled {
+		return
+	}
+	path := s.resolveUsageStatisticsPath(s.cfg)
+	if strings.TrimSpace(path) == "" {
+		return
+	}
+	interval := time.Duration(s.cfg.UsageStatisticsFlushIntervalSeconds) * time.Second
+	s.usageStatsStop = internalusage.StartPersistence(ctx, internalusage.GetRequestStatistics(), path, interval)
+}
+
+func (s *Service) resolveUsageStatisticsPath(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	path := strings.TrimSpace(cfg.UsageStatisticsPath)
+	baseDir := ""
+	if strings.TrimSpace(s.configPath) != "" {
+		baseDir = filepath.Dir(s.configPath)
+	}
+	if path == "" {
+		if baseDir == "" {
+			return "usage-statistics.json"
+		}
+		return filepath.Join(baseDir, "usage-statistics.json")
+	}
+	if filepath.IsAbs(path) || baseDir == "" {
+		return path
+	}
+	return filepath.Join(baseDir, path)
 }
 
 func (s *Service) ensureAuthDir() error {

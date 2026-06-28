@@ -27,6 +27,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/managementasset"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -223,6 +224,9 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	conversationLogStore := conversationlog.NewStore(conversationlog.OptionsFromConfig(cfg, configFilePath))
 	s.handlers.SetConversationLogStore(conversationLogStore)
 	s.mgmt.SetConversationLogStore(conversationLogStore)
+	usage.SetStatisticsEnabled(cfg.UsageStatisticsEnabled)
+	s.mgmt.SetUsageStatistics(usage.GetRequestStatistics())
+	installAPIKeyUsageStatsLookup(usage.GetRequestStatistics())
 
 	// Home heartbeat gate: when home is enabled, block all endpoints with 503 until the
 	// subscribe-config heartbeat connection is healthy.

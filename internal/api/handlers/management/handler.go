@@ -19,6 +19,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginstore"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
@@ -62,6 +63,9 @@ type Handler struct {
 	pluginReleaseCacheMu    sync.Mutex
 	pluginReleaseCache      map[string]pluginReleaseCacheEntry
 	conversationLog         *conversationlog.Store
+	// usageStats is the shared rich-usage aggregation store exposed by the
+	// usage statistics endpoints. It is nil until SetUsageStatistics installs it.
+	usageStats *usage.RequestStatistics
 }
 
 type configReloadSnapshot struct {
@@ -268,6 +272,28 @@ func (h *Handler) conversationLogStore() *conversationlog.Store {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.conversationLog
+}
+
+// SetUsageStatistics installs the rich-usage aggregation store used by the
+// usage statistics endpoints (GetUsageStatistics/ExportUsageStatistics/
+// ImportUsageStatistics). Passing nil leaves those endpoints serving an empty
+// snapshot.
+func (h *Handler) SetUsageStatistics(stats *usage.RequestStatistics) {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	h.usageStats = stats
+	h.mu.Unlock()
+}
+
+func (h *Handler) usageStatistics() *usage.RequestStatistics {
+	if h == nil {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.usageStats
 }
 
 // SetPostAuthHook registers a hook to be called after auth record creation but before persistence.
