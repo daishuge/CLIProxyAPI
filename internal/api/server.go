@@ -35,6 +35,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v7/sdk/access"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/api/handlers"
@@ -363,6 +364,16 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	s.handlers.SetConversationLogStore(conversationLogStore)
 	s.mgmt.SetConversationLogStore(conversationLogStore)
 
+	// Wire the rich-usage aggregation store (PPAP usage analytics) into the
+	// management handler and honour the `usage-statistics-enabled` config flag.
+	// The LoggerPlugin registered in internal/usage stays a no-op while disabled,
+	// keeping the request hot path zero-overhead by default. Connecting the same
+	// store to the per-key budget lookup makes the request/token/cost budgets in
+	// api_key_controls.go enforceable (model/enabled controls already worked).
+	usage.SetStatisticsEnabled(cfg.UsageStatisticsEnabled)
+	s.mgmt.SetUsageStatistics(usage.GetRequestStatistics())
+	installAPIKeyUsageStatsLookup(usage.GetRequestStatistics())
+
 	// Home heartbeat gate: when home is enabled, block all endpoints with 503 until the
 	// subscribe-config heartbeat connection is healthy.
 	engine.Use(s.homeHeartbeatMiddleware())
@@ -676,6 +687,9 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.DELETE("/api-keys", s.mgmt.DeleteAPIKeys)
 		mgmt.GET("/api-key-usage", s.mgmt.GetAPIKeyUsage)
 		mgmt.GET("/usage-queue", s.mgmt.GetUsageQueue)
+		mgmt.GET("/usage-statistics", s.mgmt.GetUsageStatistics)
+		mgmt.GET("/usage-statistics/export", s.mgmt.ExportUsageStatistics)
+		mgmt.POST("/usage-statistics/import", s.mgmt.ImportUsageStatistics)
 
 		mgmt.GET("/gemini-api-key", s.mgmt.GetGeminiKeys)
 		mgmt.PUT("/gemini-api-key", s.mgmt.PutGeminiKeys)
