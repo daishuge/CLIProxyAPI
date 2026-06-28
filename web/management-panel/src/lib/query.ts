@@ -30,4 +30,15 @@ export const queryKeys = {
   usageStatistics: ["usage-statistics"] as const,
   latestVersion: ["latest-version"] as const,
   apiKeys: ["api-keys"] as const,
+  // Providers & Auth
+  authFiles: ["auth-files"] as const,
+  authFileModels: (name: string) => ["auth-files", "models", name] as const,
+  providerKeys: (provider: string) => ["provider-keys", provider] as const,
+  // Routing & Models
+  modelDefinitions: (channel: string) => ["model-definitions", channel] as const,
+  modelAliases: ["oauth-model-alias"] as const,
+  excludedModels: ["oauth-excluded-models"] as const,
+  forceModelPrefix: ["force-model-prefix"] as const,
+  customUpstreams: ["custom-upstreams"] as const,
+  routingStrategy: ["routing", "strategy"] as const,
 };

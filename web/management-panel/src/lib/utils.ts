@@ -32,3 +32,40 @@ export function formatCompact(value: number, locale?: string): string {
     maximumFractionDigits: 1,
   }).format(value);
 }
+
+/** Human-readable byte size (e.g. 1.2 KB, 3.4 MB). */
+export function formatBytes(bytes: number, locale?: string): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, exponent);
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} ${units[exponent]}`;
+}
+
+/** Locale-aware date-time, tolerant of empty/invalid input. */
+export function formatDateTime(value: string | number | undefined | null, locale?: string): string {
+  if (value === undefined || value === null || value === "") return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+/** Mask a secret, keeping a short readable suffix (e.g. ••••••3f9a). */
+export function maskSecret(secret: string, visible = 4): string {
+  const trimmed = secret.trim();
+  if (trimmed.length <= visible) return "•".repeat(Math.max(trimmed.length, 4));
+  return `${"•".repeat(8)}${trimmed.slice(-visible)}`;
+}
+
+/** Trigger a browser download for an in-memory blob. */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

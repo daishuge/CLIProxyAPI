@@ -3,6 +3,8 @@ import { useRouter } from "./router";
 import { type RouteId } from "./routes";
 import { OverviewPage } from "@/pages/overview-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
+import { ProvidersPage } from "@/pages/providers/providers-page";
+import { RoutingPage } from "@/pages/routing/routing-page";
 
 /** Renders the active route's page component. */
 export function AppRouter() {
@@ -10,8 +12,8 @@ export function AppRouter() {
 
   const pages: Record<RouteId, ReactNode> = {
     overview: <OverviewPage />,
-    providers: <PlaceholderPage titleKey="nav.providers" />,
-    routing: <PlaceholderPage titleKey="nav.routing" />,
+    providers: <ProvidersPage />,
+    routing: <RoutingPage />,
     plugins: <PlaceholderPage titleKey="nav.plugins" />,
     traffic: <PlaceholderPage titleKey="nav.traffic" />,
     logs: <PlaceholderPage titleKey="nav.logs" />,
