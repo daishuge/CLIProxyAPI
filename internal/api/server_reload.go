@@ -162,6 +162,8 @@ func (s *Server) UpdateClientsContext(ctx context.Context, cfg *config.Config) b
 		s.exampleAPIKeySafeModeActive.Store(exampleAPIKeySafeModeRequired)
 	}
 	s.cfg = cfg
+	s.handlers.SetPresetPromptConfig(cfg.PresetPrompt)
+	s.handlers.SetAPIKeyControls(cfg.APIKeyControls)
 	if s.codexLiveHandler != nil {
 		if errUpdate := s.codexLiveHandler.UpdateConfig(cfg); errUpdate != nil {
 			log.WithError(errUpdate).Error("failed to update Codex Live media relay configuration")

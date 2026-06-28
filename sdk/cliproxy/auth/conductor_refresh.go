@@ -549,7 +549,12 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 				current.StatusMessage = "unauthorized"
 			} else {
 				current.NextRefreshAfter = now.Add(refreshFailureBackoff)
+				current.NextRetryAfter = now.Add(refreshFailureBackoff)
+				current.Unavailable = true
+				current.Status = StatusError
+				current.StatusMessage = err.Error()
 			}
+			current.UpdatedAt = now
 			m.auths[id] = current
 			shouldReschedule = true
 			if m.scheduler != nil {
@@ -572,6 +577,7 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 	}
 	updated.LastRefreshedAt = now
 	updated.NextRefreshAfter = time.Time{}
+	updated.NextRetryAfter = time.Time{}
 	updated.LastError = nil
 	updated.StatusMessage = ""
 	updated.Unavailable = false
