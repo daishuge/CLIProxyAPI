@@ -61,7 +61,9 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	setReasoningEffortMetadata(reqMeta, entryProtocol, normalizedModel, rawJSON)
 	setServiceTierMetadata(reqMeta, rawJSON)
 	setGenerateMetadata(reqMeta, rawJSON)
-	payload := rawJSON
+	apiKey := apiKeyFromRequestContext(ctx)
+	payload, presetRedactions := h.applyRequestPromptInjectionsToPayloadForAPIKey(entryProtocol, rawJSON, apiKey)
+	immersiveDelimiterCount, immersiveActive := immersiveTranslateSegmentDelimiterCountForPayload(entryProtocol, rawJSON)
 	if len(payload) == 0 {
 		payload = nil
 	}
@@ -99,6 +101,10 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	rawResponseHeaders := cloneHeader(resp.Headers)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, lifecycle.requestID(), responseProtocol, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
+	body = redactPresetPromptsFromPayload(body, presetRedactions)
+	if immersiveActive {
+		body = normalizeImmersiveTranslateResponsePayload(responseProtocol, body, immersiveDelimiterCount)
+	}
 	lifecycle.complete(pluginapi.RequestCompletionSucceeded, http.StatusOK, nil)
 	return body, responseHeaders, nil
 }

@@ -295,7 +295,9 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 	setReasoningEffortMetadata(reqMeta, entryProtocol, normalizedModel, rawJSON)
 	setServiceTierMetadata(reqMeta, rawJSON)
 	setGenerateMetadata(reqMeta, rawJSON)
-	payload := rawJSON
+	apiKey := apiKeyFromRequestContext(ctx)
+	payload, presetRedactions := h.applyRequestPromptInjectionsToPayloadForAPIKey(entryProtocol, rawJSON, apiKey)
+	streamRedactor := newPresetPromptStreamRedactorForPrompts(presetRedactions)
 	if len(payload) == 0 {
 		payload = nil
 	}
@@ -446,6 +448,12 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 				return nil, false, nil
 			}
 		}
+		if streamRedactor != nil {
+			payload = streamRedactor.Push(payload)
+			if len(payload) == 0 {
+				return nil, false, nil
+			}
+		}
 		return payload, true, nil
 	}
 
@@ -543,6 +551,7 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 		bootstrapPayload = nil
 		bootstrapChunkIndex = 0
 		bootstrapHistoryChunks = nil
+		streamRedactor = newPresetPromptStreamRedactorForPrompts(presetRedactions)
 		if responseSSEValidator != nil {
 			responseSSEValidator = &sseJSONValidationState{}
 		}
@@ -605,6 +614,17 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 			}
 		}
 
+		flushRedactor := func() bool {
+			if streamRedactor == nil {
+				return true
+			}
+			redacted := streamRedactor.Flush()
+			if len(redacted) == 0 {
+				return true
+			}
+			return sendData(redacted)
+		}
+
 		if bootstrapErr != nil {
 			completionOutcome = pluginapi.RequestCompletionFailed
 			if bootstrapErr.DirectResponse {
@@ -653,6 +673,13 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 						completionStatus = errMsg.StatusCode
 						completionErr = errMsg.Error
 						_ = sendErr(errMsg)
+					}
+				}
+				if !flushRedactor() {
+					completionOutcome = pluginapi.RequestCompletionCanceled
+					completionStatus = 0
+					if ctx != nil {
+						completionErr = ctx.Err()
 					}
 				}
 				return

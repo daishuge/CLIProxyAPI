@@ -287,6 +287,13 @@ type BaseAPIHandler struct {
 	// ModelRouterHost optionally routes matching requests to a plugin executor, the router's own
 	// executor, or a built-in provider before model-to-provider resolution and auth selection.
 	ModelRouterHost PluginModelRouterHost
+
+	// presetPromptMu guards the request-time preset prompt snapshot and per-key controls.
+	presetPromptMu sync.RWMutex
+	// presetPromptConfig holds the global preset prompt injected into supported upstream requests.
+	presetPromptConfig config.PresetPromptConfig
+	// apiKeyControls holds per-client-key request-time controls.
+	apiKeyControls []config.APIKeyControl
 }
 
 // NewBaseAPIHandlers creates a new API handlers instance.
