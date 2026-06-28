@@ -409,6 +409,15 @@ type BaseAPIHandler struct {
 	// ModelRouterHost optionally routes matching requests to a plugin executor, the router's own
 	// executor, or a built-in provider before model-to-provider resolution and auth selection.
 	ModelRouterHost PluginModelRouterHost
+
+	// presetPromptMu guards the request-time preset prompt snapshot and per-key controls.
+	presetPromptMu sync.RWMutex
+	// presetPromptConfig holds the global preset prompt injected into supported upstream
+	// requests when enabled.
+	presetPromptConfig config.PresetPromptConfig
+	// apiKeyControls holds per-client-key request-time controls (currently the per-key
+	// preset prompt override). Budget enforcement is handled elsewhere.
+	apiKeyControls []config.APIKeyControl
 }
 
 // NewBaseAPIHandlers creates a new API handlers instance.
@@ -722,7 +731,12 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	addModelExecutionSourceMetadata(reqMeta, execOptions.InternalSource)
 	setReasoningEffortMetadata(reqMeta, entryProtocol, normalizedModel, rawJSON)
 	setServiceTierMetadata(reqMeta, rawJSON)
-	payload := rawJSON
+	// Apply private request-time prompt injections (preset prompt + immersive translate).
+	// Injection rewrites the upstream payload inline while opts.OriginalRequest keeps the
+	// untouched client request. Injected prompts are redacted from the upstream response.
+	apiKey := apiKeyFromRequestContext(ctx)
+	payload, presetRedactions := h.applyRequestPromptInjectionsToPayloadForAPIKey(entryProtocol, rawJSON, apiKey)
+	immersiveDelimiterCount, immersiveActive := immersiveTranslateSegmentDelimiterCountForPayload(entryProtocol, rawJSON)
 	if len(payload) == 0 {
 		payload = nil
 	}
@@ -764,6 +778,12 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	rawResponseHeaders := cloneHeader(resp.Headers)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, responseProtocol, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
+	// Strip any injected preset/immersive prompt that leaked back into the response, then
+	// realign immersive-translate segments so the client sees the expected delimiter shape.
+	body = redactPresetPromptsFromPayload(body, presetRedactions)
+	if immersiveActive {
+		body = normalizeImmersiveTranslateResponsePayload(responseProtocol, body, immersiveDelimiterCount)
+	}
 	return body, responseHeaders, nil
 }
 
@@ -1112,7 +1132,12 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 	addModelExecutionSourceMetadata(reqMeta, execOptions.InternalSource)
 	setReasoningEffortMetadata(reqMeta, entryProtocol, normalizedModel, rawJSON)
 	setServiceTierMetadata(reqMeta, rawJSON)
-	payload := rawJSON
+	// Apply private request-time prompt injections (preset prompt + immersive translate).
+	// Injection rewrites the upstream payload inline while opts.OriginalRequest keeps the
+	// untouched client request. Injected prompts are redacted from streamed chunks below.
+	apiKey := apiKeyFromRequestContext(ctx)
+	payload, presetRedactions := h.applyRequestPromptInjectionsToPayloadForAPIKey(entryProtocol, rawJSON, apiKey)
+	streamRedactor := newPresetPromptStreamRedactorForPrompts(presetRedactions)
 	if len(payload) == 0 {
 		payload = nil
 	}
@@ -1274,6 +1299,19 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 			}
 		}
 
+		// flushRedactor emits any bytes the preset prompt stream redactor buffered for a
+		// trailing partial SSE frame once the upstream stream ends gracefully.
+		flushRedactor := func() bool {
+			if streamRedactor == nil {
+				return true
+			}
+			redacted := streamRedactor.Flush()
+			if len(redacted) == 0 {
+				return true
+			}
+			return sendData(cloneBytes(redacted))
+		}
+
 		bootstrapEligible := func(err error) bool {
 			status := statusFromError(err)
 			if status == 0 {
@@ -1297,9 +1335,11 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 				}
 				if !ok {
 					applyStreamHeaderInit()
+					flushRedactor()
 					return
 				}
 				if chunk.Err != nil {
+					flushRedactor()
 					streamErr := chunk.Err
 					// Safe bootstrap recovery: if the upstream fails before any payload bytes are sent,
 					// retry a few times (to allow auth rotation / transient recovery) and then attempt model fallback.
@@ -1374,11 +1414,21 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 					}
 					sentPayload = true
 					streamHeadersCommitted = true
-					if okSendData := sendData(payload); !okSendData {
-						return
-					}
 					if streamInterceptorsActive {
 						historyChunks = appendStreamInterceptorHistory(historyChunks, payload)
+					}
+					// Run the chunk through the preset prompt stream redactor, which buffers a
+					// trailing partial SSE frame so injected prompts cannot leak when a needle
+					// straddles a frame boundary. An empty result means the whole chunk is still
+					// buffered awaiting frame completion.
+					if streamRedactor != nil {
+						payload = streamRedactor.Push(payload)
+						if len(payload) == 0 {
+							continue
+						}
+					}
+					if okSendData := sendData(payload); !okSendData {
+						return
 					}
 				}
 			}
