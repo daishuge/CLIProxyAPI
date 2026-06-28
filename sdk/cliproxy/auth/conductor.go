@@ -5569,8 +5569,16 @@ func (m *Manager) refreshAuth(ctx context.Context, id string) {
 				current.Status = StatusError
 				current.StatusMessage = "unauthorized"
 			} else {
+				// Mark the auth unavailable for the refresh backoff window so the
+				// selector skips it until a retry is due, instead of routing live
+				// traffic to a credential whose refresh just failed.
 				current.NextRefreshAfter = now.Add(refreshFailureBackoff)
+				current.Unavailable = true
+				current.Status = StatusError
+				current.StatusMessage = "refresh failed"
+				current.NextRetryAfter = now.Add(refreshFailureBackoff)
 			}
+			current.UpdatedAt = now
 			m.auths[id] = current
 			shouldReschedule = true
 			if m.scheduler != nil {
@@ -5594,6 +5602,12 @@ func (m *Manager) refreshAuth(ctx context.Context, id string) {
 	updated.LastRefreshedAt = now
 	updated.NextRefreshAfter = time.Time{}
 	updated.LastError = nil
+	// Clear any refresh-failure unavailability marked on a prior attempt so the
+	// recovered credential becomes selectable again.
+	updated.Unavailable = false
+	updated.Status = StatusActive
+	updated.StatusMessage = ""
+	updated.NextRetryAfter = time.Time{}
 	updated.UpdatedAt = now
 	if m.shouldRefresh(updated, now) {
 		updated.NextRefreshAfter = now.Add(refreshIneffectiveBackoff)

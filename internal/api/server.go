@@ -317,6 +317,11 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		pluginHost:          optionState.pluginHost,
 	}
 	s.wsAuthEnabled.Store(cfg.WebsocketAuth)
+	// Activate the PPAP preset-prompt injection and per-key controls on the
+	// shared base handler. These setters were added in the handler port; wiring
+	// them here is what makes the dormant features live.
+	s.handlers.SetPresetPromptConfig(cfg.PresetPrompt)
+	s.handlers.SetAPIKeyControls(cfg.APIKeyControls)
 	s.handlers.SetPluginHost(optionState.pluginHost)
 	if optionState.pluginHost != nil {
 		optionState.pluginHost.SetModelExecutor(s.handlers)
@@ -430,6 +435,9 @@ func (s *Server) setupRoutes() {
 	// OpenAI compatible API routes
 	v1 := s.engine.Group("/v1")
 	v1.Use(AuthMiddleware(s.accessManager))
+	// Per-key controls run after authentication so the resolved principal
+	// (stored under "userApiKey") is available for matching.
+	v1.Use(s.apiKeyControlsMiddleware())
 	{
 		v1.GET("/models", s.unifiedModelsHandler(openaiHandlers, claudeCodeHandlers))
 		v1.POST("/chat/completions", openaiHandlers.ChatCompletions)
@@ -450,6 +458,7 @@ func (s *Server) setupRoutes() {
 
 	openaiV1 := s.engine.Group("/openai/v1")
 	openaiV1.Use(AuthMiddleware(s.accessManager))
+	openaiV1.Use(s.apiKeyControlsMiddleware())
 	{
 		openaiV1.POST("/videos", openaiHandlers.VideosCreate)
 		openaiV1.GET("/videos/:video_id/content", openaiHandlers.VideosContent)
@@ -459,6 +468,7 @@ func (s *Server) setupRoutes() {
 	// Codex CLI direct route aliases (chatgpt_base_url compatible)
 	codexDirect := s.engine.Group("/backend-api/codex")
 	codexDirect.Use(AuthMiddleware(s.accessManager))
+	codexDirect.Use(s.apiKeyControlsMiddleware())
 	{
 		codexDirect.GET("/responses", openaiResponsesHandlers.ResponsesWebsocket)
 		codexDirect.POST("/responses", openaiResponsesHandlers.Responses)
@@ -468,6 +478,7 @@ func (s *Server) setupRoutes() {
 	// Gemini compatible API routes
 	v1beta := s.engine.Group("/v1beta")
 	v1beta.Use(AuthMiddleware(s.accessManager))
+	v1beta.Use(s.apiKeyControlsMiddleware())
 	{
 		v1beta.GET("/models", s.geminiModelsHandler(geminiHandlers))
 		v1beta.POST("/models/*action", geminiHandlers.GeminiHandler)
@@ -1678,6 +1689,10 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 
 	s.applyAccessConfig(oldCfg, cfg)
 	s.cfg = cfg
+	// Re-apply preset prompt and per-key controls so hot config reloads keep
+	// the handler-level copies in sync with the active configuration.
+	s.handlers.SetPresetPromptConfig(cfg.PresetPrompt)
+	s.handlers.SetAPIKeyControls(cfg.APIKeyControls)
 	s.wsAuthEnabled.Store(cfg.WebsocketAuth)
 	if oldCfg != nil && s.wsAuthChanged != nil && oldCfg.WebsocketAuth != cfg.WebsocketAuth {
 		s.wsAuthChanged(oldCfg.WebsocketAuth, cfg.WebsocketAuth)

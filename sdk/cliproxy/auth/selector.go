@@ -309,6 +309,22 @@ func isAuthBlockedForModel(auth *Auth, model string, now time.Time) (bool, block
 	if auth.Disabled || auth.Status == StatusDisabled {
 		return true, blockReasonDisabled, time.Time{}
 	}
+	// Auth-level unavailability (e.g. a failed token refresh) must be checked
+	// before per-model state, so the credential is skipped for every model
+	// while it is in its retry backoff window.
+	if auth.Unavailable && auth.NextRetryAfter.After(now) {
+		next := auth.NextRetryAfter
+		if !auth.Quota.NextRecoverAt.IsZero() && auth.Quota.NextRecoverAt.After(now) {
+			next = auth.Quota.NextRecoverAt
+		}
+		if next.Before(now) {
+			next = now
+		}
+		if auth.Quota.Exceeded {
+			return true, blockReasonCooldown, next
+		}
+		return true, blockReasonOther, next
+	}
 	if model != "" {
 		if len(auth.ModelStates) > 0 {
 			state, ok := auth.ModelStates[model]
@@ -344,19 +360,6 @@ func isAuthBlockedForModel(auth *Auth, model string, now time.Time) (bool, block
 			}
 		}
 		return false, blockReasonNone, time.Time{}
-	}
-	if auth.Unavailable && auth.NextRetryAfter.After(now) {
-		next := auth.NextRetryAfter
-		if !auth.Quota.NextRecoverAt.IsZero() && auth.Quota.NextRecoverAt.After(now) {
-			next = auth.Quota.NextRecoverAt
-		}
-		if next.Before(now) {
-			next = now
-		}
-		if auth.Quota.Exceeded {
-			return true, blockReasonCooldown, next
-		}
-		return true, blockReasonOther, next
 	}
 	return false, blockReasonNone, time.Time{}
 }
