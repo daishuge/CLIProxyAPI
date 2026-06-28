@@ -41,6 +41,28 @@ api-keys:
   - "your-api-key-2"
   - "your-api-key-3"
 
+# Optional per-key model, prompt, and usage controls. Keys without an entry keep the legacy unrestricted behavior.
+# Model patterns support "*". Budget values <= 0 are unlimited. Set unlimited: true to bypass usage budgets.
+# Request, token, and estimated USD budgets are evaluated from usage statistics, so enable usage-statistics-enabled when using budgets.
+# api-key-controls:
+#   - name: "spark-only"
+#     api-key: "your-api-key-1"
+#     models:
+#       - "gpt-5.3-codex-spark*"
+#     unlimited: true
+#   - name: "all-models"
+#     api-key: "your-api-key-2"
+#     models:
+#       - "*"
+#     max-requests: 0
+#     max-total-tokens: 0
+#     max-cost-usd: 0
+#     # Optional per-key preset prompt. When present, this overrides the global preset-prompt block for this API key.
+#     # preset-prompt:
+#     #   enabled: true
+#     #   prompt: ""
+#     #   max-bytes: 32768
+
 # Enable debug logging
 debug: false
 
@@ -125,6 +147,27 @@ error-logs-max-files: 10
 # When false, disable in-memory usage statistics aggregation
 usage-statistics-enabled: false
 
+# Optional file path for automatic usage statistics persistence.
+# Defaults to usage-statistics.json next to config.yaml when usage statistics are enabled.
+usage-statistics-path: ""
+
+# How often usage statistics are flushed to disk. Defaults to 30 seconds when omitted or <= 0.
+usage-statistics-flush-interval-seconds: 30
+
+# Full conversation logs can store complete request and response bodies. Keep disabled unless needed.
+conversation-log:
+  enabled: false
+  directory: "conversation-logs"
+  max-file-size-mb: 16
+  max-total-size-mb: 256
+  max-entry-bytes: 2097152
+
+# Preset prompt is inserted only into upstream chat-like requests when explicitly enabled.
+preset-prompt:
+  enabled: false
+  prompt: ""
+  max-bytes: 32768
+
 # How long (in seconds) usage queue items are retained in memory for the Management API.
 # The local Redis RESP usage output is disabled.
 # Default: 60. Max: 3600.
@@ -156,6 +199,14 @@ max-retry-interval: 30
 # When true, disable auth/model cooldown scheduling globally (prevents blackout windows after failure states).
 # A credential/provider disable-cooling value, when present, overrides this global value.
 disable-cooling: false
+
+# Optional upstream concurrency gates. Defaults keep current behavior unlimited.
+# Use provider limits to queue bursts before they reach fragile upstream accounts or proxy paths.
+upstream-concurrency:
+  default: 0
+  providers:
+    # codex: 12
+  queue-timeout-seconds: 30
 
 # When true, persist per-auth cooldown status as .cds files next to auth files.
 # Default is false; when false, cooldown status is kept in memory only.
@@ -584,7 +635,8 @@ nonstream-keepalive-interval: 0
 #   user-agent: "codex_cli_rs/0.114.0 (Mac OS 14.2.0; x86_64) vscode/1.111.0"
 #   beta-features: "multi_agent"
 
-# OpenAI compatibility providers
+# OpenAI compatibility providers (custom upstreams).
+# The config key remains openai-compatibility for existing deployments; the management API also exposes it as custom-upstreams.
 # openai-compatibility:
 #   - name: "openrouter" # The name of the provider; it will be used in the user agent and other places.
 #     disabled: false # optional: set to true to disable this provider without removing it

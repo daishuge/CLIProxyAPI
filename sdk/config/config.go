@@ -14,6 +14,10 @@ type StreamingConfig = internalconfig.StreamingConfig
 type ClaudeCodeConfig = internalconfig.ClaudeCodeConfig
 type TLSConfig = internalconfig.TLSConfig
 type RemoteManagement = internalconfig.RemoteManagement
+type ConversationLogConfig = internalconfig.ConversationLogConfig
+type PresetPromptConfig = internalconfig.PresetPromptConfig
+type APIKeyControl = internalconfig.APIKeyControl
+type UpstreamConcurrencyConfig = internalconfig.UpstreamConcurrencyConfig
 type OAuthModelAlias = internalconfig.OAuthModelAlias
 type PayloadConfig = internalconfig.PayloadConfig
 type PayloadRule = internalconfig.PayloadRule
@@ -35,6 +39,8 @@ type TLS = internalconfig.TLSConfig
 
 const (
 	DefaultPanelGitHubRepository = internalconfig.DefaultPanelGitHubRepository
+	DefaultPresetPromptMaxBytes  = internalconfig.DefaultPresetPromptMaxBytes
+	PresetPromptHardMaxBytes     = internalconfig.PresetPromptHardMaxBytes
 )
 
 func LoadConfig(configFile string) (*Config, error) { return internalconfig.LoadConfig(configFile) }

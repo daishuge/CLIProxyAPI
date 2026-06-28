@@ -51,6 +51,11 @@ func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 	removeLegacyOpenAICompatAPIKeys(original.Content[0])
 	removeRemovedIntegrationKeys(original.Content[0])
 	removeLegacyGenerativeLanguageKeys(original.Content[0])
+	// Preserve the management-facing alias when it is already used on disk.
+	if findMapKeyIndex(original.Content[0], customUpstreamsConfigKey) >= 0 {
+		removeMapKey(original.Content[0], openAICompatibilityConfigKey)
+		renameMapKey(generated.Content[0], openAICompatibilityConfigKey, customUpstreamsConfigKey)
+	}
 
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-excluded-models")
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-model-alias")
@@ -639,6 +644,14 @@ func removeMapKey(mapNode *yaml.Node, key string) {
 			return
 		}
 	}
+}
+
+func renameMapKey(mapNode *yaml.Node, oldKey, newKey string) {
+	idx := findMapKeyIndex(mapNode, oldKey)
+	if idx < 0 || mapNode.Content[idx] == nil {
+		return
+	}
+	mapNode.Content[idx].Value = newKey
 }
 
 func pruneMappingToGeneratedKeys(dstRoot, srcRoot *yaml.Node, keyPath ...string) {

@@ -57,6 +57,18 @@ type Config struct {
 	// UsageStatisticsEnabled toggles in-memory usage aggregation; when false, usage data is discarded.
 	UsageStatisticsEnabled bool `yaml:"usage-statistics-enabled" json:"usage-statistics-enabled"`
 
+	// UsageStatisticsPath stores the automatic usage snapshot. When empty, it defaults to usage-statistics.json next to config.yaml.
+	UsageStatisticsPath string `yaml:"usage-statistics-path,omitempty" json:"usage-statistics-path,omitempty"`
+
+	// UsageStatisticsFlushIntervalSeconds controls how often the usage snapshot is written. Default is 30 seconds.
+	UsageStatisticsFlushIntervalSeconds int `yaml:"usage-statistics-flush-interval-seconds,omitempty" json:"usage-statistics-flush-interval-seconds,omitempty"`
+
+	// ConversationLog controls opt-in full conversation logging storage.
+	ConversationLog ConversationLogConfig `yaml:"conversation-log" json:"conversation-log"`
+
+	// PresetPrompt controls opt-in upstream-only prompt injection.
+	PresetPrompt PresetPromptConfig `yaml:"preset-prompt" json:"preset-prompt"`
+
 	// RedisUsageQueueRetentionSeconds controls how long usage queue items are retained
 	// in memory for Management API consumers.
 	// Default: 60. Max: 3600.
@@ -89,6 +101,10 @@ type Config struct {
 
 	// Routing controls credential selection behavior.
 	Routing RoutingConfig `yaml:"routing" json:"routing"`
+
+	// UpstreamConcurrency limits concurrent upstream requests before they reach providers.
+	// Limits are opt-in; zero means unlimited.
+	UpstreamConcurrency UpstreamConcurrencyConfig `yaml:"upstream-concurrency" json:"upstream-concurrency"`
 
 	// WebsocketAuth enables or disables authentication for the WebSocket API.
 	WebsocketAuth bool `yaml:"ws-auth" json:"ws-auth"`
@@ -142,6 +158,8 @@ type Config struct {
 
 	// OpenAICompatibility defines OpenAI API compatibility configurations for external providers.
 	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
+	// CustomUpstreams exposes the same pool under its management-facing name.
+	CustomUpstreams []OpenAICompatibility `yaml:"-" json:"custom-upstreams,omitempty"`
 
 	// VertexCompatAPIKey defines Vertex AI-compatible API key configurations for third-party providers.
 	// Used for services that use Vertex AI-style paths but with simple API key authentication.
@@ -160,4 +178,8 @@ type Config struct {
 
 	// Payload defines default and override rules for provider payload parameters.
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
+
+	// APIKeyControls optionally restrict client API keys to specific models and usage budgets.
+	// Entries are matched by exact key. Keys without an entry keep the legacy unrestricted behavior.
+	APIKeyControls []APIKeyControl `yaml:"api-key-controls,omitempty" json:"api-key-controls,omitempty"`
 }

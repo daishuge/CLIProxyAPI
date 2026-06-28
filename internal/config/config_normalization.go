@@ -103,9 +103,14 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are
 // not actionable, specifically those missing a BaseURL. It trims whitespace before
-// evaluation and preserves the relative order of remaining entries.
+// evaluation and preserves the relative order of remaining entries. It also mirrors the
+// sanitized pool into CustomUpstreams, the management-facing view of the same providers.
 func (cfg *Config) SanitizeOpenAICompatibility() {
-	if cfg == nil || len(cfg.OpenAICompatibility) == 0 {
+	if cfg == nil {
+		return
+	}
+	if len(cfg.OpenAICompatibility) == 0 {
+		cfg.CustomUpstreams = nil
 		return
 	}
 	out := make([]OpenAICompatibility, 0, len(cfg.OpenAICompatibility))
@@ -122,6 +127,47 @@ func (cfg *Config) SanitizeOpenAICompatibility() {
 		out = append(out, e)
 	}
 	cfg.OpenAICompatibility = out
+	cfg.CustomUpstreams = append([]OpenAICompatibility(nil), out...)
+}
+
+// mergeCustomUpstreams folds management-facing custom-upstreams entries into the
+// OpenAI-compatibility pool. Entries matching an existing provider by name or base URL
+// replace it in place; the rest are appended. Entries without a base URL are ignored.
+func (cfg *Config) mergeCustomUpstreams(entries []OpenAICompatibility) {
+	if cfg == nil || len(entries) == 0 {
+		return
+	}
+	merged := append([]OpenAICompatibility(nil), cfg.OpenAICompatibility...)
+	for _, entry := range entries {
+		entry.Name = strings.TrimSpace(entry.Name)
+		entry.BaseURL = strings.TrimSpace(entry.BaseURL)
+		if entry.BaseURL == "" {
+			continue
+		}
+		idx := findOpenAICompatibilityIndex(merged, entry.Name, entry.BaseURL)
+		if idx >= 0 {
+			merged[idx] = entry
+			continue
+		}
+		merged = append(merged, entry)
+	}
+	cfg.OpenAICompatibility = merged
+}
+
+func findOpenAICompatibilityIndex(entries []OpenAICompatibility, name, baseURL string) int {
+	name = strings.TrimSpace(name)
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	for i := range entries {
+		entryName := strings.TrimSpace(entries[i].Name)
+		entryBaseURL := strings.TrimRight(strings.TrimSpace(entries[i].BaseURL), "/")
+		if name != "" && strings.EqualFold(entryName, name) {
+			return i
+		}
+		if baseURL != "" && strings.EqualFold(entryBaseURL, baseURL) {
+			return i
+		}
+	}
+	return -1
 }
 
 // SanitizeCodexKeys removes Codex API key entries missing a BaseURL.

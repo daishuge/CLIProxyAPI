@@ -68,6 +68,8 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	cfg.LogsMaxTotalSizeMB = 0
 	cfg.ErrorLogsMaxFiles = 10
 	cfg.UsageStatisticsEnabled = false
+	cfg.ConversationLog = DefaultConversationLogConfig()
+	cfg.PresetPrompt = DefaultPresetPromptConfig()
 	cfg.RedisUsageQueueRetentionSeconds = 60
 	cfg.DisableCooling = false
 	cfg.SaveCooldownStatus = false
@@ -86,6 +88,13 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 			return cfgOptional, nil
 		}
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	var customUpstreamAlias struct {
+		CustomUpstreams []OpenAICompatibility `yaml:"custom-upstreams"`
+	}
+	if errAlias := yaml.Unmarshal(data, &customUpstreamAlias); errAlias == nil && len(customUpstreamAlias.CustomUpstreams) > 0 {
+		cfg.mergeCustomUpstreams(customUpstreamAlias.CustomUpstreams)
 	}
 
 	cfg.CredentialConcurrency = cfg.CredentialConcurrency.WithDefaults()
@@ -131,6 +140,24 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 		cfg.ErrorLogsMaxFiles = 10
 	}
 
+	cfg.ConversationLog.Normalize()
+	cfg.PresetPrompt.Normalize()
+	if errValidatePresetPrompt := cfg.PresetPrompt.Validate(); errValidatePresetPrompt != nil {
+		return nil, errValidatePresetPrompt
+	}
+	for i := range cfg.APIKeyControls {
+		if cfg.APIKeyControls[i].MaxCostUSD < 0 {
+			cfg.APIKeyControls[i].MaxCostUSD = 0
+		}
+		if cfg.APIKeyControls[i].PresetPrompt == nil {
+			continue
+		}
+		cfg.APIKeyControls[i].PresetPrompt.Normalize()
+		if errValidateAPIKeyPresetPrompt := cfg.APIKeyControls[i].PresetPrompt.Validate(); errValidateAPIKeyPresetPrompt != nil {
+			return nil, fmt.Errorf("api-key-controls[%d].preset-prompt: %w", i, errValidateAPIKeyPresetPrompt)
+		}
+	}
+
 	if cfg.RedisUsageQueueRetentionSeconds <= 0 {
 		cfg.RedisUsageQueueRetentionSeconds = 60
 	} else if cfg.RedisUsageQueueRetentionSeconds > 3600 {
@@ -141,6 +168,8 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	if cfg.MaxRetryCredentials < 0 {
 		cfg.MaxRetryCredentials = 0
 	}
+
+	cfg.UpstreamConcurrency.Normalize()
 
 	cfg.NormalizePluginsConfig()
 	if errResolvePluginsDir := cfg.ResolvePluginsDir(); errResolvePluginsDir != nil && cfg.Plugins.Enabled {
