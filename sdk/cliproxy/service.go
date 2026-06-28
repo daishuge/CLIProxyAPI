@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
+	internalusage "github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/watcher"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/watcher/diff"
@@ -110,6 +112,10 @@ type Service struct {
 	homeLogForwarder  *logging.HomeAppLogForwarder
 	homePluginSyncMu  sync.Mutex
 	homePluginSyncKey string
+
+	// usageStatsStop cancels the rich-usage snapshot persistence goroutine after
+	// a final flush. It is nil when usage statistics persistence is not running.
+	usageStatsStop func()
 }
 
 const (
@@ -1621,6 +1627,12 @@ func (s *Service) Run(ctx context.Context) error {
 		redisqueue.SetUsageStatisticsEnabled(true)
 	}
 
+	// Start the PPAP rich-usage snapshot persistence once the effective config is
+	// finalized (home mode forces usage statistics on above). The LoggerPlugin
+	// registered in internal/usage records only while StatisticsEnabled is true,
+	// so this is inert by default and imposes no flush I/O unless enabled.
+	s.startUsageStatisticsPersistence(ctx)
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 	defer func() {
@@ -1878,9 +1890,63 @@ func (s *Service) Shutdown(ctx context.Context) error {
 			}
 		}
 
+		if s.usageStatsStop != nil {
+			s.usageStatsStop()
+			s.usageStatsStop = nil
+		}
+
 		usage.StopDefault()
 	})
 	return shutdownErr
+}
+
+// startUsageStatisticsPersistence enables the PPAP rich-usage aggregation store
+// according to the effective config and, when usage statistics are enabled,
+// launches the snapshot persistence goroutine. The snapshot path defaults to
+// usage-statistics.json next to the config file when not explicitly configured,
+// and the flush interval defaults to internalusage.DefaultPersistenceInterval.
+func (s *Service) startUsageStatisticsPersistence(ctx context.Context) {
+	if s == nil {
+		return
+	}
+	cfg := s.cfg
+	if cfg == nil {
+		return
+	}
+	internalusage.SetStatisticsEnabled(cfg.UsageStatisticsEnabled)
+	if !cfg.UsageStatisticsEnabled {
+		return
+	}
+	path := s.resolveUsageStatisticsPath(cfg)
+	if strings.TrimSpace(path) == "" {
+		return
+	}
+	interval := time.Duration(cfg.UsageStatisticsFlushIntervalSeconds) * time.Second
+	stop := internalusage.StartPersistence(ctx, internalusage.GetRequestStatistics(), path, interval)
+	if stop != nil {
+		s.usageStatsStop = stop
+	}
+}
+
+// resolveUsageStatisticsPath resolves the usage snapshot file path. A configured
+// relative path is resolved against the config file directory; when unset it
+// defaults to usage-statistics.json alongside the config file.
+func (s *Service) resolveUsageStatisticsPath(cfg *config.Config) string {
+	path := strings.TrimSpace(cfg.UsageStatisticsPath)
+	baseDir := ""
+	if strings.TrimSpace(s.configPath) != "" {
+		baseDir = filepath.Dir(s.configPath)
+	}
+	if path == "" {
+		if baseDir == "" {
+			return "usage-statistics.json"
+		}
+		return filepath.Join(baseDir, "usage-statistics.json")
+	}
+	if filepath.IsAbs(path) || baseDir == "" {
+		return path
+	}
+	return filepath.Join(baseDir, path)
 }
 
 func (s *Service) ensureAuthDir() error {
