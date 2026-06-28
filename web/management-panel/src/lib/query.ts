@@ -41,4 +41,12 @@ export const queryKeys = {
   forceModelPrefix: ["force-model-prefix"] as const,
   customUpstreams: ["custom-upstreams"] as const,
   routingStrategy: ["routing", "strategy"] as const,
+  // Traffic & Usage
+  apiKeyUsage: ["api-key-usage"] as const,
+  // Logs
+  requestLogs: ["request-logs"] as const,
+  errorLogs: ["error-logs"] as const,
+  conversationLogs: ["conversation-logs"] as const,
+  conversationLogDetail: (id: string) => ["conversation-logs", id] as const,
+  logStorage: ["log-storage"] as const,
 };

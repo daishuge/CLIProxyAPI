@@ -2,9 +2,13 @@ import { type ReactNode } from "react";
 import { useRouter } from "./router";
 import { type RouteId } from "./routes";
 import { OverviewPage } from "@/pages/overview-page";
-import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProvidersPage } from "@/pages/providers/providers-page";
 import { RoutingPage } from "@/pages/routing/routing-page";
+import { TrafficPage } from "@/pages/traffic/traffic-page";
+import { LogsPage } from "@/pages/logs/logs-page";
+import { PluginsPage } from "@/pages/plugins/plugins-page";
+import { ConfigPage } from "@/pages/config/config-page";
+import { SystemPage } from "@/pages/system/system-page";
 
 /** Renders the active route's page component. */
 export function AppRouter() {
@@ -14,11 +18,11 @@ export function AppRouter() {
     overview: <OverviewPage />,
     providers: <ProvidersPage />,
     routing: <RoutingPage />,
-    plugins: <PlaceholderPage titleKey="nav.plugins" />,
-    traffic: <PlaceholderPage titleKey="nav.traffic" />,
-    logs: <PlaceholderPage titleKey="nav.logs" />,
-    config: <PlaceholderPage titleKey="nav.config" />,
-    system: <PlaceholderPage titleKey="nav.system" />,
+    plugins: <PluginsPage />,
+    traffic: <TrafficPage />,
+    logs: <LogsPage />,
+    config: <ConfigPage />,
+    system: <SystemPage />,
   };
 
   return pages[route.id];
