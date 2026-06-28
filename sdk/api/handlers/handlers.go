@@ -21,6 +21,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v7/internal/translator/codex/compat"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
@@ -1704,6 +1705,15 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 		}
 	}
 
+	// Codex fast-mode aliases (e.g. "gpt-5.5-fast" or "gpt-5.5-high-fast") strip the
+	// "-fast" suffix here so the request resolves to the base Codex model (priority
+	// service tier is applied later in the executor). Only strip when the resulting
+	// model still routes to the codex provider, so unrelated "-fast" model IDs from
+	// other providers are left untouched.
+	if fastModel, ok := codexcompat.NormalizeFastModelAlias(resolvedModelName); ok && canRouteModelToProvider(fastModel, "codex") {
+		resolvedModelName = fastModel
+	}
+
 	parsed := thinking.ParseSuffix(resolvedModelName)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 
@@ -1763,6 +1773,30 @@ func routeModelBaseName(model string) string {
 		return strings.TrimSpace(model[idx+1:])
 	}
 	return model
+}
+
+// canRouteModelToProvider reports whether the given model (with or without a
+// thinking suffix) resolves to the named provider in the model registry. It is
+// used to confirm a stripped "-fast" alias still belongs to the codex provider
+// before the alias is applied. Both parenthesized and hyphen-level thinking
+// suffixes are recognized so aliases like "gpt-5.5-high" route to their base
+// model's provider.
+func canRouteModelToProvider(modelName, provider string) bool {
+	parsed := thinking.ParseSuffixAllowHyphen(modelName)
+	baseModel := strings.TrimSpace(parsed.ModelName)
+	for _, candidate := range util.GetProviderName(baseModel) {
+		if candidate == provider {
+			return true
+		}
+	}
+	if baseModel != modelName {
+		for _, candidate := range util.GetProviderName(modelName) {
+			if candidate == provider {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func cloneBytes(src []byte) []byte {
