@@ -25,7 +25,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	cfg.Host = "" // Default empty: binds to all interfaces (IPv4 + IPv6)
 	cfg.LoggingToFile = false
 	cfg.LogsMaxTotalSizeMB = 0
-	cfg.ErrorLogsMaxFiles = 10
+	cfg.ErrorLogsMaxFiles = 0
 	cfg.UsageStatisticsEnabled = false
 	cfg.RedisUsageQueueRetentionSeconds = 60
 	cfg.DisableCooling = false
@@ -74,7 +74,7 @@ func ParseConfigBytes(data []byte) (*Config, error) {
 	}
 
 	if cfg.ErrorLogsMaxFiles < 0 {
-		cfg.ErrorLogsMaxFiles = 10
+		cfg.ErrorLogsMaxFiles = 0
 	}
 
 	if cfg.RedisUsageQueueRetentionSeconds <= 0 {

@@ -66,7 +66,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	cfg.Host = "" // Default empty: binds to all interfaces (IPv4 + IPv6)
 	cfg.LoggingToFile = false
 	cfg.LogsMaxTotalSizeMB = 0
-	cfg.ErrorLogsMaxFiles = 10
+	cfg.ErrorLogsMaxFiles = 0
 	cfg.UsageStatisticsEnabled = false
 	cfg.ConversationLog = DefaultConversationLogConfig()
 	cfg.PresetPrompt = DefaultPresetPromptConfig()
@@ -137,7 +137,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	}
 
 	if cfg.ErrorLogsMaxFiles < 0 {
-		cfg.ErrorLogsMaxFiles = 10
+		cfg.ErrorLogsMaxFiles = 0
 	}
 
 	cfg.ConversationLog.Normalize()

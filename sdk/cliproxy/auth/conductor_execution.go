@@ -353,7 +353,9 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 			if !restoreExecutionModel {
 				execReq = attachResolvedAPIKeyModelInfo(routing, execReq, auth, routeModel, upstreamModel)
 			}
-			resp, errExec := executor.Execute(execCtx, auth, execReq, execOpts)
+			resp, errExec := m.executeWithUpstreamConcurrency(execCtx, provider, auth, execReq, func() (cliproxyexecutor.Response, error) {
+				return executor.Execute(execCtx, auth, execReq, execOpts)
+			})
 			if errExec != nil {
 				if errCtx := execCtx.Err(); errCtx != nil {
 					return cliproxyexecutor.Response{}, errCtx
@@ -361,7 +363,9 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 				if refreshed, okRefresh := m.tryRefreshAfterUnauthorized(execCtx, auth, errExec, didRefreshOnUnauthorized); okRefresh {
 					auth = refreshed
 					didRefreshOnUnauthorized = true
-					resp, errExec = executor.Execute(execCtx, auth, execReq, execOpts)
+					resp, errExec = m.executeWithUpstreamConcurrency(execCtx, provider, auth, execReq, func() (cliproxyexecutor.Response, error) {
+						return executor.Execute(execCtx, auth, execReq, execOpts)
+					})
 					if errExec != nil {
 						if errCtx := execCtx.Err(); errCtx != nil {
 							return cliproxyexecutor.Response{}, errCtx
@@ -513,7 +517,9 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 			if !restoreExecutionModel {
 				execReq = attachResolvedAPIKeyModelInfo(routing, execReq, auth, routeModel, upstreamModel)
 			}
-			resp, errExec := executor.CountTokens(execCtx, auth, execReq, execOpts)
+			resp, errExec := m.executeWithUpstreamConcurrency(execCtx, provider, auth, execReq, func() (cliproxyexecutor.Response, error) {
+				return executor.CountTokens(execCtx, auth, execReq, execOpts)
+			})
 			if errExec != nil {
 				if errCtx := execCtx.Err(); errCtx != nil {
 					return cliproxyexecutor.Response{}, errCtx
@@ -521,7 +527,9 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 				if refreshed, okRefresh := m.tryRefreshAfterUnauthorized(execCtx, auth, errExec, didRefreshOnUnauthorized); okRefresh {
 					auth = refreshed
 					didRefreshOnUnauthorized = true
-					resp, errExec = executor.CountTokens(execCtx, auth, execReq, execOpts)
+					resp, errExec = m.executeWithUpstreamConcurrency(execCtx, provider, auth, execReq, func() (cliproxyexecutor.Response, error) {
+						return executor.CountTokens(execCtx, auth, execReq, execOpts)
+					})
 					if errExec != nil {
 						if errCtx := execCtx.Err(); errCtx != nil {
 							return cliproxyexecutor.Response{}, errCtx
@@ -744,8 +752,16 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 			models = models[:1]
 			pooled = false
 		}
-		streamResult, errStream := m.executeStreamWithModelPool(execCtx, executor, auth, provider, execReq, execOpts, routeModel, streamExecutionModel, models, pooled, aliasResult, routing, !homeMode || selection != nil, selection != nil, unauthorizedRefreshTried)
+		permit, errPermit := m.acquireUpstreamConcurrency(execCtx, provider, auth, execReq)
+		var streamResult *cliproxyexecutor.StreamResult
+		errStream := errPermit
+		if errStream == nil {
+			streamResult, errStream = m.executeStreamWithModelPool(execCtx, executor, auth, provider, execReq, execOpts, routeModel, streamExecutionModel, models, pooled, aliasResult, routing, !homeMode || selection != nil, selection != nil, unauthorizedRefreshTried)
+		}
 		if errStream != nil {
+			if permit != nil {
+				permit.Release()
+			}
 			if selection != nil {
 				releaseAttempt()
 				if errEnd := m.endHomeSelectionBeforeRedispatch(ctx, selection, "stream_start_failed"); errEnd != nil {
@@ -774,6 +790,13 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 				homeAuthCount++
 			}
 			continue
+		}
+		if permit != nil {
+			if streamResult == nil {
+				permit.Release()
+			} else {
+				streamResult = streamResultWithPermitRelease(execCtx, streamResult, permit)
+			}
 		}
 		if selection != nil {
 			if m.retainHomeWebsocketSelection(ctx, opts, routeModel, selection) {

@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	defaultManagementReleaseURL  = "https://api.github.com/repos/router-for-me/Cli-Proxy-API-Management-Center/releases/latest"
-	defaultManagementFallbackURL = "https://cpamc.router-for.me/"
+	defaultManagementReleaseURL  = "https://api.github.com/repos/daishuge/playful-proxy-api-panel/releases/latest"
+	defaultManagementFallbackURL = "https://github.com/daishuge/playful-proxy-api-panel/releases/latest/download/management.html"
 	managementAssetName          = "management.html"
-	httpUserAgent                = "CLIProxyAPI-management-updater"
+	httpUserAgent                = "PlayfulProxyAPI-management-updater"
 	managementSyncMinInterval    = 30 * time.Second
 	updateCheckInterval          = 3 * time.Hour
 	maxAssetDownloadSize         = 50 << 20 // 10 MB safety limit for management asset downloads

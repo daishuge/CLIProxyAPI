@@ -235,7 +235,7 @@ func (h *Handler) PutErrorLogsMaxFiles(c *gin.Context) {
 	}
 	value := *body.Value
 	if value < 0 {
-		value = 10
+		value = 0
 	}
 	h.cfg.ErrorLogsMaxFiles = value
 	h.persist(c)
