@@ -252,6 +252,11 @@ type Manager struct {
 	// It is initialized in NewManager; never Load() before first Store().
 	runtimeConfig atomic.Value
 
+	// upstreamLimitersMu guards access to the per-upstream concurrency limiters.
+	upstreamLimitersMu sync.Mutex
+	// upstreamLimiters holds the active per-upstream concurrency limiters keyed by provider.
+	upstreamLimiters map[string]*upstreamConcurrencyLimiter
+
 	// Optional HTTP RoundTripper provider injected by host.
 	rtProvider RoundTripperProvider
 
@@ -282,6 +287,7 @@ func NewManager(store Store, selector Selector, hook Hook) *Manager {
 		homeRuntimeAuths: make(map[string]map[string]*Auth),
 		providerOffsets:  make(map[string]int),
 		modelPoolOffsets: make(map[string]int),
+		upstreamLimiters: make(map[string]*upstreamConcurrencyLimiter),
 	}
 	// atomic.Value requires non-nil initial value.
 	manager.runtimeConfig.Store(&internalconfig.Config{})
@@ -2575,6 +2581,11 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 			lastErr = errPrepare
 			continue
 		}
+		// Acquire a per-upstream concurrency permit before issuing real upstream calls.
+		permit, errPermit := m.acquireUpstreamConcurrency(execCtx, provider, auth, req)
+		if errPermit != nil {
+			return cliproxyexecutor.Response{}, errPermit
+		}
 		var authErr error
 		didRefreshOnUnauthorized := false
 		for _, upstreamModel := range models {
@@ -2589,6 +2600,9 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 			resp, errExec := executor.Execute(execCtx, auth, execReq, execOpts)
 			if errExec != nil {
 				if errCtx := execCtx.Err(); errCtx != nil {
+					if permit != nil {
+						permit.Release()
+					}
 					return cliproxyexecutor.Response{}, errCtx
 				}
 				if refreshed, okRefresh := m.tryRefreshAfterUnauthorized(execCtx, auth, errExec, didRefreshOnUnauthorized); okRefresh {
@@ -2613,14 +2627,23 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 				}
 				m.MarkResult(execCtx, result)
 				if isRequestInvalidError(errExec) {
+					if permit != nil {
+						permit.Release()
+					}
 					return cliproxyexecutor.Response{}, errExec
 				}
 				authErr = errExec
 				continue
 			}
 			m.MarkResult(execCtx, result)
+			if permit != nil {
+				permit.Release()
+			}
 			rewriteForceMappedResponse(&resp, aliasResult)
 			return resp, nil
+		}
+		if permit != nil {
+			permit.Release()
 		}
 		if authErr != nil {
 			if isRequestInvalidError(authErr) {
@@ -2694,6 +2717,11 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 			lastErr = errPrepare
 			continue
 		}
+		// Acquire a per-upstream concurrency permit before issuing real upstream calls.
+		permit, errPermit := m.acquireUpstreamConcurrency(execCtx, provider, auth, req)
+		if errPermit != nil {
+			return cliproxyexecutor.Response{}, errPermit
+		}
 		var authErr error
 		didRefreshOnUnauthorized := false
 		for _, upstreamModel := range models {
@@ -2708,6 +2736,9 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 			resp, errExec := executor.CountTokens(execCtx, auth, execReq, execOpts)
 			if errExec != nil {
 				if errCtx := execCtx.Err(); errCtx != nil {
+					if permit != nil {
+						permit.Release()
+					}
 					return cliproxyexecutor.Response{}, errCtx
 				}
 				if refreshed, okRefresh := m.tryRefreshAfterUnauthorized(execCtx, auth, errExec, didRefreshOnUnauthorized); okRefresh {
@@ -2732,14 +2763,23 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 				}
 				m.MarkResult(execCtx, result)
 				if isRequestInvalidError(errExec) {
+					if permit != nil {
+						permit.Release()
+					}
 					return cliproxyexecutor.Response{}, errExec
 				}
 				authErr = errExec
 				continue
 			}
 			m.MarkResult(execCtx, result)
+			if permit != nil {
+				permit.Release()
+			}
 			rewriteForceMappedResponse(&resp, aliasResult)
 			return resp, nil
+		}
+		if permit != nil {
+			permit.Release()
 		}
 		if authErr != nil {
 			if isRequestInvalidError(authErr) {
@@ -2811,6 +2851,11 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 			lastErr = errPrepare
 			continue
 		}
+		// Acquire a per-upstream concurrency permit before issuing real upstream calls.
+		permit, errPermit := m.acquireUpstreamConcurrency(execCtx, provider, auth, req)
+		if errPermit != nil {
+			return nil, errPermit
+		}
 		execReq := sanitizeDownstreamWebsocketFallbackRequest(execCtx, auth, req)
 		streamExecutionModel := ""
 		if restoreExecutionModel {
@@ -2818,6 +2863,9 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 		}
 		streamResult, errStream := m.executeStreamWithModelPool(execCtx, executor, auth, provider, execReq, opts, routeModel, streamExecutionModel, models, pooled, aliasResult)
 		if errStream != nil {
+			if permit != nil {
+				permit.Release()
+			}
 			if errCtx := execCtx.Err(); errCtx != nil {
 				return nil, errCtx
 			}
@@ -2829,6 +2877,14 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 				homeAuthCount++
 			}
 			continue
+		}
+		// Release the permit once the stream is fully consumed; if no stream was produced, release immediately.
+		if permit != nil {
+			if streamResult == nil {
+				permit.Release()
+			} else {
+				streamResult = streamResultWithPermitRelease(execCtx, streamResult, permit)
+			}
 		}
 		return streamResult, nil
 	}
