@@ -34,7 +34,7 @@ function StorePluginCard({
         <CardTitle className="flex items-center gap-2 text-base">
           <Store className="size-4 text-muted-foreground" />
           {plugin.name}
-          <Badge variant="secondary" className="font-mono text-xs">
+          <Badge variant="outline" className="font-mono text-xs">
             {plugin.version}
           </Badge>
         </CardTitle>

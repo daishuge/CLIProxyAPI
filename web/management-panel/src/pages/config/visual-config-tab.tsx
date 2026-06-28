@@ -66,7 +66,7 @@ export function VisualConfigTab() {
       const safe: Partial<ManagementConfig> = {};
       for (const key of SAFE_FIELDS) {
         if (query.data[key] !== undefined) {
-          safe[key] = query.data[key];
+          (safe as Record<string, unknown>)[key] = query.data[key];
         }
       }
       setDraft(safe);

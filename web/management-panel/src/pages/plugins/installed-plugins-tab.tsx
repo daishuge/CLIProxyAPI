@@ -6,7 +6,6 @@ import { usePluginsQuery, useUpdatePluginMutation, type Plugin } from "@/lib/api
 import {
   Button,
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -37,7 +36,7 @@ function PluginCard({
             <CardTitle className="flex items-center gap-2 text-base">
               <Puzzle className="size-4 text-muted-foreground" />
               {plugin.name}
-              <Badge variant="secondary" className="font-mono text-xs">
+              <Badge variant="outline" className="font-mono text-xs">
                 {plugin.version}
               </Badge>
             </CardTitle>

@@ -55,14 +55,14 @@ export function VersionTab() {
         <div className="grid gap-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">{t("system.current_version")}</span>
-            <Badge variant="secondary" className="font-mono">
+            <Badge variant="outline" className="font-mono">
               {APP_VERSION}
             </Badge>
           </div>
           {latest ? (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{t("system.latest_version")}</span>
-              <Badge variant={updateAvailable ? "default" : "secondary"} className="font-mono">
+              <Badge variant={updateAvailable ? "default" : "outline"} className="font-mono">
                 {latest}
               </Badge>
             </div>
