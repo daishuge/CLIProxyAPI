@@ -21,6 +21,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
 	internalusage "github.com/router-for-me/CLIProxyAPI/v7/internal/usage"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/watcher"
@@ -2701,8 +2702,21 @@ func oauthModelAliasesForAuth(cfg *config.Config, channel string, attributes map
 
 func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*ModelInfo) []*ModelInfo {
 	type aliasEntry struct {
-		alias string
-		fork  bool
+		alias              string
+		fork               bool
+		fixedThinkingBase  bool
+		fixedThinkingLevel string
+	}
+
+	originalIDs := make(map[string]struct{}, len(models))
+	for _, model := range models {
+		if model == nil {
+			continue
+		}
+		id := strings.ToLower(strings.TrimSpace(model.ID))
+		if id != "" {
+			originalIDs[id] = struct{}{}
+		}
 	}
 
 	forward := make(map[string][]aliasEntry, len(aliases))
@@ -2717,6 +2731,23 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 		}
 		key := strings.ToLower(name)
 		forward[key] = append(forward[key], aliasEntry{alias: alias, fork: aliases[i].Fork})
+		// When the configured name carries a thinking level suffix (e.g.
+		// "gpt-5.3-codex-spark-high") and the exact suffixed model is not itself a
+		// listed model, also register the alias against the base model so the alias
+		// resolves to a fixed upstream reasoning effort. This pins the alias to a
+		// single level and prevents automatic per-level alias generation for it.
+		nameResult := thinking.ParseSuffixAllowHyphen(name)
+		baseName := strings.TrimSpace(nameResult.ModelName)
+		_, exactTargetExists := originalIDs[key]
+		if nameResult.HasSuffix && !exactTargetExists && baseName != "" && !strings.EqualFold(baseName, name) {
+			baseKey := strings.ToLower(baseName)
+			forward[baseKey] = append(forward[baseKey], aliasEntry{
+				alias:              alias,
+				fork:               aliases[i].Fork,
+				fixedThinkingBase:  true,
+				fixedThinkingLevel: nameResult.RawSuffix,
+			})
+		}
 	}
 	if len(forward) == 0 {
 		return models
@@ -2759,6 +2790,12 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 
 		addedAlias := false
 		for _, entry := range entries {
+			// A fixed-thinking alias only makes sense when the base model actually
+			// supports the requested level; skip it otherwise so non-thinking models
+			// do not gain a misleading alias.
+			if entry.fixedThinkingBase && !thinkingLevelSupported(model.Thinking, entry.fixedThinkingLevel) {
+				continue
+			}
 			mappedID := strings.TrimSpace(entry.alias)
 			if mappedID == "" {
 				continue
@@ -2776,6 +2813,12 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 			if clone.Name != "" {
 				clone.Name = rewriteModelInfoName(clone.Name, id, mappedID)
 			}
+			// A fixed-thinking alias is pinned to one reasoning level, so drop the
+			// thinking metadata on the clone to avoid generating additional level
+			// aliases for it downstream.
+			if entry.fixedThinkingBase && model.Thinking != nil {
+				clone.Thinking = nil
+			}
 			out = append(out, &clone)
 			addedAlias = true
 		}
@@ -2789,4 +2832,23 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 		}
 	}
 	return out
+}
+
+// thinkingLevelSupported reports whether the given thinking support declares the
+// requested discrete reasoning level. It is used to gate fixed-thinking aliases
+// so they are only added for models that actually support the pinned level.
+func thinkingLevelSupported(support *registry.ThinkingSupport, level string) bool {
+	if support == nil {
+		return false
+	}
+	level = strings.ToLower(strings.TrimSpace(level))
+	if level == "" {
+		return false
+	}
+	for _, candidate := range support.Levels {
+		if strings.EqualFold(strings.TrimSpace(candidate), level) {
+			return true
+		}
+	}
+	return false
 }

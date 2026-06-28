@@ -43,6 +43,44 @@ func ParseSuffix(model string) SuffixResult {
 	}
 }
 
+var hyphenLevelSuffixes = map[string]ThinkingLevel{
+	"low":    LevelLow,
+	"medium": LevelMedium,
+	"high":   LevelHigh,
+	"xhigh":  LevelXHigh,
+}
+
+// ParseSuffixAllowHyphen extracts model(level) and model-level suffixes.
+//
+// Hyphen suffix parsing is intentionally limited to level aliases used as model
+// convenience aliases. Numeric budgets remain parenthesis-only so ordinary
+// hyphenated model IDs are not treated as budget syntax.
+func ParseSuffixAllowHyphen(model string) SuffixResult {
+	if result := ParseSuffix(model); result.HasSuffix {
+		return result
+	}
+	return ParseHyphenLevelSuffix(model)
+}
+
+// ParseHyphenLevelSuffix extracts a model-low/model-medium/model-high/model-xhigh suffix.
+// It does not validate that the base model supports the level.
+func ParseHyphenLevelSuffix(model string) SuffixResult {
+	model = strings.TrimSpace(model)
+	lastDash := strings.LastIndex(model, "-")
+	if lastDash <= 0 || lastDash == len(model)-1 {
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	base := strings.TrimSpace(model[:lastDash])
+	raw := strings.TrimSpace(model[lastDash+1:])
+	if base == "" || raw == "" {
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	if _, ok := hyphenLevelSuffixes[strings.ToLower(raw)]; !ok {
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	return SuffixResult{ModelName: base, HasSuffix: true, RawSuffix: strings.ToLower(raw)}
+}
+
 // ParseNumericSuffix attempts to parse a raw suffix as a numeric budget value.
 //
 // This function parses the raw suffix content (from ParseSuffix.RawSuffix) as an integer.
