@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -418,6 +419,12 @@ type BaseAPIHandler struct {
 	// apiKeyControls holds per-client-key request-time controls (currently the per-key
 	// preset prompt override). Budget enforcement is handled elsewhere.
 	apiKeyControls []config.APIKeyControl
+
+	// conversationLogMu guards the opt-in full conversation log sink.
+	conversationLogMu sync.RWMutex
+	// conversationLogStore persists opt-in full conversation logs. It is nil unless a
+	// store is wired in via SetConversationLogStore and the feature is enabled.
+	conversationLogStore *conversationlog.Store
 }
 
 // NewBaseAPIHandlers creates a new API handlers instance.
@@ -702,8 +709,23 @@ func appendAPIResponse(c *gin.Context, data []byte) {
 
 // ExecuteWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
+//
+// When opt-in conversation logging is enabled the request is recorded before
+// execution and the response (or upstream error) is recorded afterwards. When the
+// store is nil or disabled startConversationLog returns a nil recorder and every
+// recorder method is a no-op, so the main proxy path keeps its original behavior
+// with zero added overhead.
 func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
-	return h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "execute", modelName, rawJSON, false, alt)
+	payload, headers, errMsg := h.executeWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	if rec != nil {
+		if errMsg != nil {
+			rec.finishNonStream(nil, conversationResponseHeaders(ctx, errMsg.Addon), errMsg.StatusCode, errMsg.Error, reqMeta)
+		} else {
+			rec.finishNonStream(payload, conversationResponseHeaders(ctx, headers), http.StatusOK, nil, reqMeta)
+		}
+	}
+	return payload, headers, errMsg
 }
 
 // ExecuteImageWithAuthManager executes an OpenAI-compatible image endpoint request.
@@ -776,6 +798,10 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 	}
 	executedReq, executedOpts := afterAuthCapture.apply(req, opts)
 	rawResponseHeaders := cloneHeader(resp.Headers)
+	// Publish the raw upstream response headers so the opt-in conversation log can
+	// record them even when passthrough headers are disabled (the default). This is
+	// a context-scoped holder write and is inert when nothing reads it.
+	logging.SetResponseHeaders(ctx, rawResponseHeaders)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, responseProtocol, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
 	// Strip any injected preset/immersive prompt that leaked back into the response, then
@@ -790,7 +816,16 @@ func (h *BaseAPIHandler) executeWithAuthManagerFormats(ctx context.Context, entr
 // ExecuteCountWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
 func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
-	return h.executeCountWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, modelExecutionOptions{})
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "count", modelName, rawJSON, false, alt)
+	payload, headers, errMsg := h.executeCountWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, modelExecutionOptions{})
+	if rec != nil {
+		if errMsg != nil {
+			rec.finishNonStream(nil, conversationResponseHeaders(ctx, errMsg.Addon), errMsg.StatusCode, errMsg.Error, reqMeta)
+		} else {
+			rec.finishNonStream(payload, conversationResponseHeaders(ctx, headers), http.StatusOK, nil, reqMeta)
+		}
+	}
+	return payload, headers, errMsg
 }
 
 func (h *BaseAPIHandler) executeCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string, execOptions modelExecutionOptions) ([]byte, http.Header, *interfaces.ErrorMessage) {
@@ -846,6 +881,8 @@ func (h *BaseAPIHandler) executeCountWithAuthManager(ctx context.Context, handle
 	}
 	executedReq, executedOpts := afterAuthCapture.apply(req, opts)
 	rawResponseHeaders := cloneHeader(resp.Headers)
+	// Publish the raw upstream response headers for the opt-in conversation log.
+	logging.SetResponseHeaders(ctx, rawResponseHeaders)
 	responseHeaders := downstreamHeadersFromExecutor(rawResponseHeaders, PassthroughHeadersEnabled(h.Cfg))
 	body, responseHeaders := h.applyResponseInterceptors(ctx, handlerType, normalizedModel, originalRequestedModel, executedOpts, rawResponseHeaders, responseHeaders, executedOpts.OriginalRequest, executedReq.Payload, resp.Payload, http.StatusOK, execOptions.SkipInterceptorPluginID)
 	return body, responseHeaders, nil
@@ -959,7 +996,20 @@ func executionErrorMessage(err error) *interfaces.ErrorMessage {
 // This path is the only supported execution route.
 // The returned http.Header carries upstream response headers captured before streaming begins.
 func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
-	return h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	ctx, rec, reqMeta := h.beginConversationLog(ctx, handlerType, "stream", modelName, rawJSON, true, alt)
+	data, headers, errs := h.executeStreamWithAuthManager(ctx, handlerType, modelName, rawJSON, alt, false)
+	if rec == nil {
+		return data, headers, errs
+	}
+	// Tee the client-facing stream into the recorder. Each chunk forwarded to the
+	// client is also captured (bounded and redacted by captureStreamChunk); the
+	// first error message determines the recorded status/error. The conversation
+	// log entry is written once both upstream channels drain, so the recording is
+	// strictly downstream of the bytes the client actually receives. The recorded
+	// response headers fall back to the raw upstream stream headers published into
+	// the context holder, since passthrough headers are disabled by default.
+	loggedHeaders := conversationResponseHeaders(ctx, headers)
+	return teeConversationLogStream(ctx, rec, headers, loggedHeaders, reqMeta, data, errs)
 }
 
 // ExecuteImageStreamWithAuthManager executes a streaming OpenAI-compatible image endpoint request.
@@ -1188,6 +1238,9 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 	// Keep a mutable map so bootstrap retries can replace it before first payload is sent.
 	rawStreamHeaders := cloneHeader(streamResult.Headers)
 	baseStreamHeaders := cloneHeader(streamResult.Headers)
+	// Publish the raw upstream stream headers so the opt-in conversation log can
+	// record them even when passthrough headers are disabled (the default).
+	logging.SetResponseHeaders(ctx, rawStreamHeaders)
 	upstreamHeaders := downstreamHeadersFromExecutor(rawStreamHeaders, passthroughHeadersEnabled)
 	if upstreamHeaders == nil && (passthroughHeadersEnabled || streamInterceptorsActive) {
 		upstreamHeaders = make(http.Header)
