@@ -30,6 +30,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/home"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/managementasset"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/redisqueue"
@@ -373,6 +374,14 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		s.mgmt.SetPostAuthPersistHook(optionState.postAuthPersistHook)
 	}
 	s.localPassword = optionState.localPassword
+
+	// Initialize the opt-in full conversation log store. The store directory is
+	// resolved relative to the config file (see conversationlog.OptionsFromConfig).
+	// When conversation logging is disabled the store performs no I/O and every
+	// recorder call is a no-op, so this wiring is inert until explicitly enabled.
+	conversationLogStore := conversationlog.NewStore(conversationlog.OptionsFromConfig(cfg, configFilePath))
+	s.handlers.SetConversationLogStore(conversationLogStore)
+	s.mgmt.SetConversationLogStore(conversationLogStore)
 
 	// Home heartbeat gate: when home is enabled, block all endpoints with 503 until the
 	// subscribe-config heartbeat connection is healthy.
@@ -825,6 +834,10 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.GET("/xai-auth-url", s.mgmt.RequestXAIToken)
 		mgmt.GET("/get-auth-status", s.mgmt.GetAuthStatus)
 		mgmt.DELETE("/oauth-session", s.mgmt.CancelAuthSession)
+
+		mgmt.GET("/conversation-logs", s.mgmt.ListConversationLogs)
+		mgmt.GET("/conversation-logs/tail", s.mgmt.TailConversationLogs)
+		mgmt.GET("/conversation-logs/:id", s.mgmt.GetConversationLog)
 	}
 }
 
@@ -1809,6 +1822,14 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		s.mgmt.SetConfig(cfg)
 		s.mgmt.SetAuthManager(s.handlers.AuthManager)
 		s.mgmt.SetPluginHost(s.pluginHost)
+	}
+	// Rebuild the conversation log store so hot config reloads pick up changes to
+	// the conversation-log enable flag, directory, and size limits. A fresh store
+	// is cheap to construct and performs no I/O until the first enabled write.
+	conversationLogStore := conversationlog.NewStore(conversationlog.OptionsFromConfig(cfg, s.configFilePath))
+	s.handlers.SetConversationLogStore(conversationLogStore)
+	if s.mgmt != nil {
+		s.mgmt.SetConversationLogStore(conversationLogStore)
 	}
 	s.refreshPluginManagementRoutes()
 

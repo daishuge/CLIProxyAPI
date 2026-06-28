@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/buildinfo"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/logging/conversationlog"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginstore"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v7/sdk/auth"
@@ -60,6 +61,7 @@ type Handler struct {
 	pluginStoreHTTPClient   pluginstore.HTTPDoer
 	pluginReleaseCacheMu    sync.Mutex
 	pluginReleaseCache      map[string]pluginReleaseCacheEntry
+	conversationLog         *conversationlog.Store
 }
 
 type configReloadSnapshot struct {
@@ -247,6 +249,25 @@ func (h *Handler) SetLogDirectory(dir string) {
 		}
 	}
 	h.logDir = dir
+}
+
+// SetConversationLogStore updates the store used by conversation log endpoints.
+func (h *Handler) SetConversationLogStore(store *conversationlog.Store) {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	h.conversationLog = store
+	h.mu.Unlock()
+}
+
+func (h *Handler) conversationLogStore() *conversationlog.Store {
+	if h == nil {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.conversationLog
 }
 
 // SetPostAuthHook registers a hook to be called after auth record creation but before persistence.
