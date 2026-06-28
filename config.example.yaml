@@ -409,6 +409,15 @@ nonstream-keepalive-interval: 0
 #         alias: "claude-opus-4.66"
 #       - name: "kimi-k2.5"
 #         alias: "claude-opus-4.66"
+#   - name: "opencode-go"
+#     base-url: "https://opencode.ai/zen/go/v1" # OpenCode Go subscription endpoint; plain /zen/v1 is pay-as-you-go.
+#     headers:
+#       User-Agent: "PlayfulProxyAPI/7"
+#     api-key-entries:
+#       - api-key: "sk-..."
+#     models:
+#       - name: "deepseek-v4-pro"
+#         alias: "opencode-go/deepseek-v4-pro"
 
 # Vertex API keys (Vertex-compatible endpoints, base-url is optional)
 # vertex-api-key:

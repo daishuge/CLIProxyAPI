@@ -801,6 +801,10 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.PUT("/openai-compatibility", s.mgmt.PutOpenAICompat)
 		mgmt.PATCH("/openai-compatibility", s.mgmt.PatchOpenAICompat)
 		mgmt.DELETE("/openai-compatibility", s.mgmt.DeleteOpenAICompat)
+		mgmt.GET("/custom-upstreams", s.mgmt.GetCustomUpstreams)
+		mgmt.PUT("/custom-upstreams", s.mgmt.PutCustomUpstreams)
+		mgmt.PATCH("/custom-upstreams", s.mgmt.PatchCustomUpstreams)
+		mgmt.DELETE("/custom-upstreams", s.mgmt.DeleteCustomUpstreams)
 
 		mgmt.GET("/vertex-api-key", s.mgmt.GetVertexCompatKeys)
 		mgmt.PUT("/vertex-api-key", s.mgmt.PutVertexCompatKeys)
