@@ -135,7 +135,9 @@
   "error": {
     "boundary_title": "發生錯誤",
     "boundary_desc": "渲染此檢視時發生未預期的錯誤。",
-    "reload": "重新載入"
+    "reload": "重新載入",
+    "page_crash_title": "頁面崩潰",
+    "page_crash_desc": "發生了未預期的錯誤。其他頁面仍可正常使用，請嘗試切換頁面或重新載入。"
   },
   "errors": {
     "name_required": "請填寫名稱",
@@ -143,6 +145,10 @@
     "base_url_required": "請填寫 Base URL",
     "base_url_invalid": "請輸入有效的 URL",
     "api_key_required": "請填寫 API Key"
+  },
+  "key_value": {
+    "key_placeholder": "Header",
+    "value_placeholder": "值"
   },
   "models_field": {
     "upstream_name": "上游模型",

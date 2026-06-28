@@ -1,6 +1,6 @@
 import { GitBranch, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSystemLatestVersionQuery } from "@/lib/api/system";
+import { useLatestVersionQuery } from "@/lib/hooks";
 import { APP_VERSION } from "@/lib/version";
 import {
   Badge,
@@ -17,7 +17,7 @@ import {
 /** Version comparison card: current build vs latest upstream release. */
 export function VersionTab() {
   const { t } = useTranslation();
-  const query = useSystemLatestVersionQuery();
+  const query = useLatestVersionQuery();
 
   const latest = query.data?.["latest-version"] ?? null;
   const updateAvailable = latest !== null && latest !== APP_VERSION;

@@ -158,7 +158,7 @@ export function VisualConfigTab() {
                   <SelectContent>
                     {ROUTING_STRATEGIES.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {s}
+                        {t(`routing_strategy.option_${s.replace(/-/g, "_")}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>

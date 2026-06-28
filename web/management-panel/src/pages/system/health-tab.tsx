@@ -1,6 +1,6 @@
 import { Activity, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSystemHealthQuery } from "@/lib/api/system";
+import { useHealthQuery } from "@/lib/hooks";
 import {
   Button,
   Card,
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 /** Health check card with auto-polling (30 s) and green/red indicator. */
 export function HealthTab() {
   const { t } = useTranslation();
-  const query = useSystemHealthQuery();
+  const query = useHealthQuery();
 
   const healthy = query.data?.status === "ok" && !query.isError;
   const state: "healthy" | "offline" | "checking" = query.isLoading

@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,38 +16,41 @@ const DrawerClose = DialogPrimitive.Close;
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
->(({ className, children, hideClose = false, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 z-50 bg-background/70 backdrop-blur-sm",
-        "data-[state=open]:animate-[ppap-overlay-in_var(--duration-normal)_var(--ease-standard)]",
-      )}
-    />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-md flex-col border-l border-border bg-surface-raised shadow-lg",
-        "data-[state=open]:animate-[ppap-drawer-in_var(--duration-normal)_var(--ease-emphasized)]",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {hideClose ? null : (
-        <DialogPrimitive.Close
-          className={cn(
-            "absolute right-4 top-4 rounded-sm text-muted-foreground transition-colors hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-          )}
-        >
-          <X className="size-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
+>(({ className, children, hideClose = false, ...props }, ref) => {
+  const { t } = useTranslation();
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay
+        className={cn(
+          "fixed inset-0 z-50 bg-background/70 backdrop-blur-sm",
+          "data-[state=open]:animate-[ppap-overlay-in_var(--duration-normal)_var(--ease-standard)]",
+        )}
+      />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-md flex-col border-l border-border bg-surface-raised shadow-lg",
+          "data-[state=open]:animate-[ppap-drawer-in_var(--duration-normal)_var(--ease-emphasized)]",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {hideClose ? null : (
+          <DialogPrimitive.Close
+            className={cn(
+              "absolute right-4 top-4 rounded-sm text-muted-foreground transition-colors hover:text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+            )}
+          >
+            <X className="size-4" />
+            <span className="sr-only">{t("common.close")}</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+});
 DrawerContent.displayName = "DrawerContent";
 
 function DrawerHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

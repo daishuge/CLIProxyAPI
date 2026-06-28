@@ -135,7 +135,9 @@
   "error": {
     "boundary_title": "Что-то пошло не так",
     "boundary_desc": "При отображении этого представления произошла непредвиденная ошибка.",
-    "reload": "Перезагрузить"
+    "reload": "Перезагрузить",
+    "page_crash_title": "Страница упала",
+    "page_crash_desc": "Произошла непредвиденная ошибка. Другие страницы работают — попробуйте перейти на другую или перезагрузить."
   },
   "errors": {
     "name_required": "Укажите имя",
@@ -143,6 +145,10 @@
     "base_url_required": "Укажите Base URL",
     "base_url_invalid": "Введите корректный URL",
     "api_key_required": "Укажите API-ключ"
+  },
+  "key_value": {
+    "key_placeholder": "Заголовок",
+    "value_placeholder": "Значение"
   },
   "models_field": {
     "upstream_name": "Модель апстрима",

@@ -135,7 +135,9 @@
   "error": {
     "boundary_title": "Something went wrong",
     "boundary_desc": "An unexpected error occurred while rendering this view.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "page_crash_title": "This page crashed",
+    "page_crash_desc": "An unexpected error occurred. Other pages still work — try navigating away or reload."
   },
   "errors": {
     "name_required": "Name is required",
@@ -143,6 +145,10 @@
     "base_url_required": "Base URL is required",
     "base_url_invalid": "Enter a valid URL",
     "api_key_required": "API key is required"
+  },
+  "key_value": {
+    "key_placeholder": "Header",
+    "value_placeholder": "Value"
   },
   "models_field": {
     "upstream_name": "Upstream model",

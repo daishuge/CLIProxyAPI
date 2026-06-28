@@ -171,10 +171,6 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     clearTimeout(timeout);
   }
 
-  if (response.status === 401) {
-    unauthorizedHandler?.();
-  }
-
   if (!response.ok) {
     let parsed: unknown = undefined;
     try {
@@ -184,6 +180,12 @@ async function request<T>(method: string, path: string, options: RequestOptions 
       // Non-JSON error body; keep details undefined.
     }
     const { message, code } = parseErrorBody(parsed);
+    // Defer the 401 handler so the ApiError propagates to the caller's
+    // catch/onError first — prevents React state updates on unmounted
+    // components when logout triggers a re-render mid-error-handling.
+    if (response.status === 401) {
+      queueMicrotask(() => unauthorizedHandler?.());
+    }
     throw new ApiError({
       message: message ?? `Request failed with status ${response.status}`,
       status: response.status,

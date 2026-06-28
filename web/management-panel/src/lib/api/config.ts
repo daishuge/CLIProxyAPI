@@ -12,14 +12,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { managementApi, MANAGEMENT_PREFIX, apiClient } from "./client";
 import type { ManagementConfig, ApiKeysResponse } from "./types";
-
-// ---------------------------------------------------------------------------
-// Query keys (local string literals — no centralized registry dependency)
-// ---------------------------------------------------------------------------
-
-const CONFIG_KEY = ["config"] as const;
-const CONFIG_YAML_KEY = ["config-yaml"] as const;
-const DOWNSTREAM_API_KEYS_KEY = ["downstream-api-keys"] as const;
+import { queryKeys } from "@/lib/query";
 
 // ---------------------------------------------------------------------------
 // Fetch helpers
@@ -67,7 +60,7 @@ export function putDownstreamApiKeys(keys: string[]): Promise<void> {
 
 export function useManagementConfigQuery(enabled = true) {
   return useQuery({
-    queryKey: CONFIG_KEY,
+    queryKey: queryKeys.config,
     queryFn: ({ signal }) => fetchConfig(signal),
     enabled,
   });
@@ -78,15 +71,15 @@ export function usePutConfigMutation() {
   return useMutation({
     mutationFn: (config: Partial<ManagementConfig>) => putConfig(config),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: CONFIG_KEY });
-      void queryClient.invalidateQueries({ queryKey: CONFIG_YAML_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.config });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.configYaml });
     },
   });
 }
 
 export function useConfigYamlQuery(enabled = true) {
   return useQuery({
-    queryKey: CONFIG_YAML_KEY,
+    queryKey: queryKeys.configYaml,
     queryFn: ({ signal }) => fetchConfigYaml(signal),
     enabled,
   });
@@ -97,15 +90,15 @@ export function usePutConfigYamlMutation() {
   return useMutation({
     mutationFn: (yaml: string) => putConfigYaml(yaml),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: CONFIG_YAML_KEY });
-      void queryClient.invalidateQueries({ queryKey: CONFIG_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.configYaml });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.config });
     },
   });
 }
 
 export function useDownstreamApiKeysQuery(enabled = true) {
   return useQuery({
-    queryKey: DOWNSTREAM_API_KEYS_KEY,
+    queryKey: queryKeys.downstreamApiKeys,
     queryFn: ({ signal }) => fetchDownstreamApiKeys(signal),
     enabled,
   });
@@ -116,7 +109,7 @@ export function usePutDownstreamApiKeysMutation() {
   return useMutation({
     mutationFn: (keys: string[]) => putDownstreamApiKeys(keys),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: DOWNSTREAM_API_KEYS_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.downstreamApiKeys });
     },
   });
 }

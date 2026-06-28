@@ -20,9 +20,8 @@ class ErrorBoundaryBase extends React.Component<
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error): void {
-    // Surface render failures in the console for diagnostics.
-    console.error("Render error:", error);
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error("Render error:", error, info.componentStack);
   }
 
   override render(): React.ReactNode {

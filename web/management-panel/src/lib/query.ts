@@ -49,4 +49,12 @@ export const queryKeys = {
   conversationLogs: ["conversation-logs"] as const,
   conversationLogDetail: (id: string) => ["conversation-logs", id] as const,
   logStorage: ["log-storage"] as const,
+  // System
+  authStatus: ["auth-status"] as const,
+  // Config
+  configYaml: ["config-yaml"] as const,
+  downstreamApiKeys: ["downstream-api-keys"] as const,
+  // Plugins
+  plugins: ["plugins"] as const,
+  pluginStore: ["plugin-store"] as const,
 };

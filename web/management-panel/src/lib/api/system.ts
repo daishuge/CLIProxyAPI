@@ -8,7 +8,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { managementApi } from "./client";
-import { fetchHealth, fetchLatestVersion } from "./endpoints";
+import { queryKeys } from "@/lib/query";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,14 +24,6 @@ export interface AuthStatus {
 }
 
 // ---------------------------------------------------------------------------
-// Query keys (local string literals — no centralized registry dependency)
-// ---------------------------------------------------------------------------
-
-const HEALTH_KEY = ["health"] as const;
-const LATEST_VERSION_KEY = ["latest-version"] as const;
-const AUTH_STATUS_KEY = ["auth-status"] as const;
-
-// ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
@@ -43,32 +35,10 @@ export function fetchAuthStatus(signal?: AbortSignal): Promise<AuthStatus> {
 // React Query hooks
 // ---------------------------------------------------------------------------
 
-/** Health with automatic polling (30 s). Wraps the shared fetchHealth. */
-export function useSystemHealthQuery() {
-  return useQuery({
-    queryKey: HEALTH_KEY,
-    queryFn: ({ signal }) => fetchHealth(signal),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-    retry: 1,
-  });
-}
-
-/** Latest upstream version. Wraps the shared fetchLatestVersion. */
-export function useSystemLatestVersionQuery(enabled = true) {
-  return useQuery({
-    queryKey: LATEST_VERSION_KEY,
-    queryFn: ({ signal }) => fetchLatestVersion(signal),
-    enabled,
-    staleTime: 60 * 60 * 1000,
-    retry: 0,
-  });
-}
-
 /** Auth status — provider & auth file counts. */
 export function useAuthStatusQuery(enabled = true) {
   return useQuery({
-    queryKey: AUTH_STATUS_KEY,
+    queryKey: queryKeys.authStatus,
     queryFn: ({ signal }) => fetchAuthStatus(signal),
     enabled,
   });

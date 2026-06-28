@@ -9,6 +9,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { managementApi } from "./client";
+import { queryKeys } from "@/lib/query";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,13 +39,6 @@ export interface PluginStoreResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Query keys (local string literals — no centralized registry dependency)
-// ---------------------------------------------------------------------------
-
-const PLUGINS_KEY = ["plugins"] as const;
-const PLUGIN_STORE_KEY = ["plugin-store"] as const;
-
-// ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
@@ -70,7 +64,7 @@ export function installPlugin(name: string): Promise<void> {
 
 export function usePluginsQuery(enabled = true) {
   return useQuery({
-    queryKey: PLUGINS_KEY,
+    queryKey: queryKeys.plugins,
     queryFn: ({ signal }) => fetchPlugins(signal),
     enabled,
   });
@@ -82,14 +76,14 @@ export function useUpdatePluginMutation() {
     mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
       updatePlugin(name, { enabled }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: PLUGINS_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plugins });
     },
   });
 }
 
 export function usePluginStoreQuery(enabled = true) {
   return useQuery({
-    queryKey: PLUGIN_STORE_KEY,
+    queryKey: queryKeys.pluginStore,
     queryFn: ({ signal }) => fetchPluginStore(signal),
     enabled,
   });
@@ -100,8 +94,8 @@ export function useInstallPluginMutation() {
   return useMutation({
     mutationFn: (name: string) => installPlugin(name),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: PLUGIN_STORE_KEY });
-      void queryClient.invalidateQueries({ queryKey: PLUGINS_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.pluginStore });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plugins });
     },
   });
 }

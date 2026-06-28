@@ -135,9 +135,10 @@ export function CustomUpstreamDrawer({
 
     const builtModels: UpstreamModel[] = models
       .filter((m) => m.name.trim() || m.alias.trim())
-      .map((m, index) => {
-        // Preserve the opaque thinking descriptor from the original model, if any.
-        const original = upstream?.models?.[index];
+      .map((m) => {
+        // Preserve the opaque thinking descriptor by matching on model name,
+        // not array index — survives reorders, additions and deletions.
+        const original = upstream?.models?.find((o) => o.name === m.name.trim());
         return {
           name: m.name.trim(),
           alias: m.alias.trim(),

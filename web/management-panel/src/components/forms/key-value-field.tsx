@@ -41,13 +41,13 @@ export function KeyValueField({
         <div key={index} className="flex items-center gap-2">
           <Input
             value={pair.key}
-            placeholder={keyPlaceholder ?? "Header"}
+            placeholder={keyPlaceholder ?? t("key_value.key_placeholder")}
             onChange={(e) => update(index, { key: e.target.value })}
             className="font-mono"
           />
           <Input
             value={pair.value}
-            placeholder={valuePlaceholder ?? "Value"}
+            placeholder={valuePlaceholder ?? t("key_value.value_placeholder")}
             onChange={(e) => update(index, { value: e.target.value })}
             className="font-mono"
           />

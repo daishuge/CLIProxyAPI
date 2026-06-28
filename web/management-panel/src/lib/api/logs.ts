@@ -80,16 +80,6 @@ export function fetchConversationLogs(signal?: AbortSignal): Promise<Conversatio
     .then((res) => res.entries ?? []);
 }
 
-/** Fetch a single conversation log detail. */
-export function fetchConversationLogDetail(
-  id: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  return managementApi.get<string>(`/conversation-logs/${encodeURIComponent(id)}`, {
-    ...(signal ? { signal } : {}),
-  });
-}
-
 /** Tail a conversation log. */
 export function fetchConversationLogTail(
   id: string,
