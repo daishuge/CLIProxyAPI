@@ -11,6 +11,7 @@ import (
 	. "github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v7/internal/translator/codex/compat"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/executor"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/pluginapi"
@@ -178,6 +179,10 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 		}
 	}
 
+	if fastModel, ok := codexcompat.NormalizeFastModelAlias(resolvedModelName); ok && canRouteModelToProvider(fastModel, "codex") {
+		resolvedModelName = fastModel
+	}
+
 	parsed := thinking.ParseSuffix(resolvedModelName)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 
@@ -252,6 +257,24 @@ func routeModelBaseName(model string) string {
 		return strings.TrimSpace(model[idx+1:])
 	}
 	return model
+}
+
+func canRouteModelToProvider(modelName, provider string) bool {
+	parsed := thinking.ParseSuffixAllowHyphen(modelName)
+	baseModel := strings.TrimSpace(parsed.ModelName)
+	for _, candidate := range util.GetProviderName(baseModel) {
+		if candidate == provider {
+			return true
+		}
+	}
+	if baseModel != modelName {
+		for _, candidate := range util.GetProviderName(modelName) {
+			if candidate == provider {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func cloneBytes(src []byte) []byte {

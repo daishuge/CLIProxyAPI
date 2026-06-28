@@ -3,6 +3,7 @@ package cliproxy
 import (
 	"testing"
 
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
 )
 
@@ -183,5 +184,62 @@ func TestApplyOAuthModelAlias_PerAuthAlias(t *testing.T) {
 	}
 	if out[0].DisplayName != "Configured GPT Five" {
 		t.Fatalf("expected per-auth display name %q, got %q", "Configured GPT Five", out[0].DisplayName)
+	}
+}
+
+func TestApplyOAuthModelAlias_ForkAddsFixedThinkingAlias(t *testing.T) {
+	cfg := &config.Config{
+		OAuthModelAlias: map[string][]config.OAuthModelAlias{
+			"codex": {
+				{Name: "gpt-5.3-codex-spark-high", Alias: "spark-fast", Fork: true},
+			},
+		},
+	}
+	models := []*ModelInfo{
+		{
+			ID:       "gpt-5.3-codex-spark",
+			Name:     "models/gpt-5.3-codex-spark",
+			Thinking: &registry.ThinkingSupport{Levels: []string{"low", "medium", "high", "xhigh"}},
+		},
+	}
+
+	out := applyOAuthModelAlias(cfg, "codex", "oauth", models)
+	ids := make(map[string]*ModelInfo, len(out))
+	for _, model := range out {
+		ids[model.ID] = model
+	}
+	// The configured "gpt-5.3-codex-spark-high" name is mapped against the base
+	// "gpt-5.3-codex-spark" model, so the alias is registered as a fixed-thinking fork.
+	if ids["spark-fast"] == nil {
+		t.Fatalf("missing fixed thinking alias in %#v", ids)
+	}
+	// A fixed-thinking alias is pinned to a single level, so it must not carry the
+	// base model's thinking metadata (which would generate further level aliases).
+	if ids["spark-fast"].Thinking != nil {
+		t.Fatalf("fixed thinking alias should not retain thinking metadata")
+	}
+	// fork: true keeps the original base model alongside the alias.
+	if ids["gpt-5.3-codex-spark"] == nil {
+		t.Fatalf("forked base model should be preserved in %#v", ids)
+	}
+}
+
+func TestApplyOAuthModelAlias_FixedThinkingAliasRequiresSupportedBase(t *testing.T) {
+	cfg := &config.Config{
+		OAuthModelAlias: map[string][]config.OAuthModelAlias{
+			"codex": {
+				{Name: "plain-model-high", Alias: "plain-fast", Fork: true},
+			},
+		},
+	}
+	models := []*ModelInfo{
+		{ID: "plain-model", Name: "models/plain-model"},
+	}
+
+	out := applyOAuthModelAlias(cfg, "codex", "oauth", models)
+	for _, model := range out {
+		if model.ID == "plain-fast" {
+			t.Fatalf("non-thinking base model should not get fixed thinking alias")
+		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/modelconfig"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/thinking"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	"github.com/router-for-me/CLIProxyAPI/v7/sdk/config"
 )
@@ -940,9 +941,21 @@ func oauthModelAliasesForAuth(cfg *config.Config, channel string, attributes map
 
 func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*ModelInfo) []*ModelInfo {
 	type aliasEntry struct {
-		alias       string
-		displayName string
-		fork        bool
+		alias              string
+		displayName        string
+		fork               bool
+		fixedThinkingBase  bool
+		fixedThinkingLevel string
+	}
+
+	originalIDs := make(map[string]struct{}, len(models))
+	for _, model := range models {
+		if model == nil {
+			continue
+		}
+		if id := strings.ToLower(strings.TrimSpace(model.ID)); id != "" {
+			originalIDs[id] = struct{}{}
+		}
 	}
 
 	forward := make(map[string][]aliasEntry, len(aliases))
@@ -961,6 +974,18 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 			displayName: strings.TrimSpace(aliases[i].DisplayName),
 			fork:        aliases[i].Fork,
 		})
+		nameResult := thinking.ParseSuffixAllowHyphen(name)
+		baseName := strings.TrimSpace(nameResult.ModelName)
+		_, exactTargetExists := originalIDs[key]
+		if nameResult.HasSuffix && !exactTargetExists && baseName != "" && !strings.EqualFold(baseName, name) {
+			forward[strings.ToLower(baseName)] = append(forward[strings.ToLower(baseName)], aliasEntry{
+				alias:              alias,
+				displayName:        strings.TrimSpace(aliases[i].DisplayName),
+				fork:               aliases[i].Fork,
+				fixedThinkingBase:  true,
+				fixedThinkingLevel: nameResult.RawSuffix,
+			})
+		}
 	}
 	if len(forward) == 0 {
 		return models
@@ -1003,6 +1028,9 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 
 		addedAlias := false
 		for _, entry := range entries {
+			if entry.fixedThinkingBase && !thinkingLevelSupported(model.Thinking, entry.fixedThinkingLevel) {
+				continue
+			}
 			mappedID := strings.TrimSpace(entry.alias)
 			if mappedID == "" {
 				continue
@@ -1023,6 +1051,9 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 			if clone.Name != "" {
 				clone.Name = rewriteModelInfoName(clone.Name, id, mappedID)
 			}
+			if entry.fixedThinkingBase && model.Thinking != nil {
+				clone.Thinking = nil
+			}
 			out = append(out, &clone)
 			addedAlias = true
 		}
@@ -1036,4 +1067,20 @@ func applyOAuthModelAliasEntries(aliases []config.OAuthModelAlias, models []*Mod
 		}
 	}
 	return out
+}
+
+func thinkingLevelSupported(support *registry.ThinkingSupport, level string) bool {
+	if support == nil {
+		return false
+	}
+	level = strings.ToLower(strings.TrimSpace(level))
+	if level == "" {
+		return false
+	}
+	for _, candidate := range support.Levels {
+		if strings.EqualFold(strings.TrimSpace(candidate), level) {
+			return true
+		}
+	}
+	return false
 }
