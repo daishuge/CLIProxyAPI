@@ -20,6 +20,7 @@ type staticModelsJSON struct {
 	Claude      []*ModelInfo `json:"claude"`
 	Gemini      []*ModelInfo `json:"gemini"`
 	Vertex      []*ModelInfo `json:"vertex"`
+	GeminiCLI   []*ModelInfo `json:"gemini-cli"`
 	AIStudio    []*ModelInfo `json:"aistudio"`
 	CodexFree   []*ModelInfo `json:"codex-free"`
 	CodexTeam   []*ModelInfo `json:"codex-team"`
@@ -43,6 +44,13 @@ func GetGeminiModels() []*ModelInfo {
 // GetGeminiVertexModels returns Gemini model definitions for Vertex AI.
 func GetGeminiVertexModels() []*ModelInfo {
 	return cloneModelInfos(getModels().Vertex)
+}
+
+// GetGeminiCLIModels returns the model definitions served through the native
+// Gemini CLI provider. Restored during the union merge so the gemini-cli entries
+// already present in models.json are surfaced to the runtime.
+func GetGeminiCLIModels() []*ModelInfo {
+	return cloneModelInfos(getModels().GeminiCLI)
 }
 
 // GetAIStudioModels returns model definitions for AI Studio.

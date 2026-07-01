@@ -994,6 +994,7 @@ func baselineExecutorAuths() []*coreauth.Auth {
 		"codex",
 		"claude",
 		"gemini",
+		"gemini-cli",
 		"vertex",
 		"aistudio",
 		"antigravity",
@@ -1071,6 +1072,8 @@ func (s *Service) registerExecutorForAuth(a *coreauth.Auth, forceReplace bool) {
 	switch strings.ToLower(a.Provider) {
 	case "gemini":
 		s.coreManager.RegisterExecutor(executor.NewGeminiExecutor(s.cfg))
+	case "gemini-cli":
+		s.coreManager.RegisterExecutor(executor.NewGeminiCLIExecutor(s.cfg))
 	case "vertex":
 		s.coreManager.RegisterExecutor(executor.NewGeminiVertexExecutor(s.cfg))
 	case "aistudio":
@@ -2017,6 +2020,9 @@ func (s *Service) registerModelsForAuthWithCache(ctx context.Context, a *coreaut
 				excluded = entry.ExcludedModels
 			}
 		}
+		models = applyExcludedModels(models, excluded)
+	case "gemini-cli":
+		models = registry.GetGeminiCLIModels()
 		models = applyExcludedModels(models, excluded)
 	case "vertex":
 		// Vertex AI Gemini supports the same model identifiers as Gemini.
