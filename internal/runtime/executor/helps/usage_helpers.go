@@ -580,6 +580,36 @@ func parseGeminiFamilyUsageDetail(node gjson.Result) usage.Detail {
 	return detail
 }
 
+// hasGeminiFamilyUsageTokenFields reports whether the given node carries any of
+// the Gemini-family usage token count fields. It is used to disambiguate a real
+// usage-metadata payload from an unrelated JSON object that merely nests a
+// "response" key.
+func hasGeminiFamilyUsageTokenFields(node gjson.Result) bool {
+	return node.Get("promptTokenCount").Exists() ||
+		node.Get("candidatesTokenCount").Exists() ||
+		node.Get("thoughtsTokenCount").Exists() ||
+		node.Get("totalTokenCount").Exists() ||
+		node.Get("cachedContentTokenCount").Exists()
+}
+
+// ParseGeminiCLIUsage parses usage metadata from a Gemini CLI non-stream
+// response. Unlike ParseGeminiUsage, the Gemini CLI wire format nests the usage
+// metadata under a top-level "response" object, so both nested and flat paths
+// are probed.
+func ParseGeminiCLIUsage(data []byte) usage.Detail {
+	usageNode := gjson.ParseBytes(data)
+	node := firstExistingUsageNode(usageNode,
+		"response.usageMetadata",
+		"response.usage_metadata",
+		"usageMetadata",
+		"usage_metadata",
+	)
+	if !node.Exists() {
+		return usage.Detail{}
+	}
+	return parseGeminiFamilyUsageDetail(node)
+}
+
 func ParseGeminiUsage(data []byte) usage.Detail {
 	usageNode := gjson.ParseBytes(data)
 	node := usageNode.Get("usageMetadata")
@@ -590,6 +620,31 @@ func ParseGeminiUsage(data []byte) usage.Detail {
 		return usage.Detail{}
 	}
 	return parseGeminiFamilyUsageDetail(node)
+}
+
+// ParseGeminiCLIStreamUsage parses usage metadata from a single Gemini CLI
+// stream line. It probes the nested "response" paths used by the CLI format and
+// requires at least one recognized token-count field to guard against false
+// positives on unrelated payloads.
+func ParseGeminiCLIStreamUsage(line []byte) (usage.Detail, bool) {
+	payload := jsonPayload(line)
+	if len(payload) == 0 || !gjson.ValidBytes(payload) {
+		return usage.Detail{}, false
+	}
+	root := gjson.ParseBytes(payload)
+	node := firstExistingUsageNode(root,
+		"response.usageMetadata",
+		"response.usage_metadata",
+		"usageMetadata",
+		"usage_metadata",
+	)
+	if !node.Exists() {
+		return usage.Detail{}, false
+	}
+	if !hasGeminiFamilyUsageTokenFields(node) {
+		return usage.Detail{}, false
+	}
+	return parseGeminiFamilyUsageDetail(node), true
 }
 
 func ParseGeminiStreamUsage(line []byte) (usage.Detail, bool) {
