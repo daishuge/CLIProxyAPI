@@ -1054,7 +1054,14 @@ func responsesWebsocketResolvedModelName(modelName string) string {
 }
 
 func responsesWebsocketProviderSetForModel(resolvedModelName string) (map[string]struct{}, string) {
-	parsed := thinking.ParseSuffix(resolvedModelName)
+	// Use the hyphen-aware, registry-scoped resolver so convenience aliases like
+	// "gpt-5.4-high" / "claude-opus-4-8-high" reduce to their registered base
+	// model for provider resolution AND for the ClientSupportsModel auth check in
+	// responsesWebsocketAuthMatchesModel. Parenthesis-only ParseSuffix left the
+	// literal "...-high" unregistered -> util.GetProviderName found no provider and
+	// ClientSupportsModel(auth.ID, "...-high") returned false -> the /v1/responses
+	// WebSocket path selected no auth (mirrors the REST getRequestDetails fix).
+	parsed := thinking.ParseSuffixForModel(resolvedModelName)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 	providers := util.GetProviderName(baseModel)
 	if len(providers) == 0 && baseModel != resolvedModelName {

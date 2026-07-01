@@ -4375,14 +4375,14 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 		return nil, nil, &Error{Code: "executor_not_found", Message: "executor not registered"}
 	}
 	candidates := make([]*Auth, 0, len(m.auths))
-	modelKey := strings.TrimSpace(model)
-	// Always use base model name (without thinking suffix) for auth matching.
-	if modelKey != "" {
-		parsed := thinking.ParseSuffix(modelKey)
-		if parsed.ModelName != "" {
-			modelKey = strings.TrimSpace(parsed.ModelName)
-		}
-	}
+	// Always use the registered base model name (without thinking suffix) for auth
+	// matching. canonicalModelKey strips BOTH the parenthesized "(high)"/"(8192)"
+	// form AND the hyphen level-alias "-high"/"-low" form, so convenience aliases
+	// like "claude-opus-4-8-high" reduce to the registered "claude-opus-4-8" that
+	// the model registry and auth model-states actually carry. This is only used
+	// here as the non-empty guard that gates authSupportsRouteModel; the full
+	// suffixed `model` is still passed downstream so the executor applies thinking.
+	modelKey := canonicalModelKey(model)
 	registryRef := registry.GetGlobalRegistry()
 	for _, candidate := range m.auths {
 		if candidate == nil || executorKeyFromAuth(candidate) != provider || candidate.Disabled {
@@ -4525,14 +4525,14 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 	selector := m.selector
 	pluginScheduler := m.pluginScheduler
 	candidates := make([]*Auth, 0, len(m.auths))
-	modelKey := strings.TrimSpace(model)
-	// Always use base model name (without thinking suffix) for auth matching.
-	if modelKey != "" {
-		parsed := thinking.ParseSuffix(modelKey)
-		if parsed.ModelName != "" {
-			modelKey = strings.TrimSpace(parsed.ModelName)
-		}
-	}
+	// Always use the registered base model name (without thinking suffix) for auth
+	// matching. canonicalModelKey strips BOTH the parenthesized "(high)"/"(8192)"
+	// form AND the hyphen level-alias "-high"/"-low" form, so convenience aliases
+	// like "claude-opus-4-8-high" reduce to the registered "claude-opus-4-8" that
+	// the model registry and auth model-states actually carry. This is only used
+	// here as the non-empty guard that gates authSupportsRouteModel; the full
+	// suffixed `model` is still passed downstream so the executor applies thinking.
+	modelKey := canonicalModelKey(model)
 	registryRef := registry.GetGlobalRegistry()
 	for _, candidate := range m.auths {
 		if candidate == nil || candidate.Disabled {

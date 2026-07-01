@@ -127,12 +127,28 @@ func authPriority(auth *Auth) int {
 	return parsed
 }
 
+// canonicalModelKey reduces a request model name to the registered base model
+// used for auth matching, per-model availability state, and scheduler shard keys.
+//
+// It strips BOTH thinking-suffix forms:
+//   - the parenthesized budget/level form, e.g. "claude-opus-4-8(high)" / "model(8192)"
+//   - the hyphen level-alias form, e.g. "claude-opus-4-8-high" / "gpt-5.4-low"
+//
+// The hyphen form MUST be reduced here (via the registry-aware ParseSuffixForModel)
+// because the model registry lists only the base model ("claude-opus-4-8"), never
+// the "-high" alias. Auth-support checks (ClientSupportsModel), per-model
+// ModelStates lookups, and scheduler shards all key on this value; leaving the
+// literal "...-high" here makes every auth appear NOT to support the model, so the
+// mixed/single auth selectors drop all candidates and the request fails with
+// auth_not_found (503). ParseSuffixForModel only strips a hyphen segment when the
+// resulting base model is a registered model that advertises that thinking level,
+// so ordinary hyphenated model IDs (that are not "<base>-<level>") are preserved.
 func canonicalModelKey(model string) string {
 	model = strings.TrimSpace(model)
 	if model == "" {
 		return ""
 	}
-	parsed := thinking.ParseSuffix(model)
+	parsed := thinking.ParseSuffixForModel(model)
 	modelName := strings.TrimSpace(parsed.ModelName)
 	if modelName == "" {
 		return model
