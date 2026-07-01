@@ -77,6 +77,15 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 	}
 	t, _ := metadata["type"].(string)
 	provider := strings.ToLower(strings.TrimSpace(t))
+	// A `type:"gemini"` OAuth account (Google Cloud Code / Gemini Code Assist) is
+	// served through the NATIVE gemini-cli provider in this fork. Upstream/trunk
+	// deleted the native gemini-cli subsystem and routes this via a plugin only,
+	// but the Option-B union merge RESTORED the native gemini-cli executor
+	// (internal/runtime/executor/gemini_cli_executor.go), its model catalog
+	// (registry.GetGeminiCLIModels) and the service.go registration cases. The
+	// native gemini executor is API-key-only and cannot use an OAuth account, so
+	// the OAuth auth must reach the native gemini-cli provider. Normalize the type
+	// here so it registers on that path.
 	if provider == "gemini" {
 		provider = "gemini-cli"
 	}
@@ -116,7 +125,15 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 			return auths
 		}
 	}
-	if provider == "" || provider == "gemini-cli" {
+	// Only drop auths with no resolvable provider. Do NOT drop "gemini-cli":
+	// trunk added that guard because it removed native gemini-cli (leaving it
+	// plugin-only), but this fork restored the native gemini-cli executor +
+	// catalog + service.go cases, so a `type:"gemini"` OAuth account must fall
+	// through to native Auth construction below and register on the gemini-cli
+	// provider (proven by the live :8317 build serving gemini-2.5-pro through it).
+	// If a plugin ParseAuth already claimed this file above, it returned early and
+	// never reaches here; this only handles the no-plugin native case.
+	if provider == "" {
 		return nil
 	}
 	label := provider

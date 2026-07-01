@@ -132,7 +132,14 @@ func TestFileSynthesizer_Synthesize_ValidAuthFile(t *testing.T) {
 	}
 }
 
-func TestFileSynthesizer_Synthesize_IgnoresGeminiProviderFile(t *testing.T) {
+// TestFileSynthesizer_Synthesize_PreservesGeminiAsGeminiCLI asserts that a
+// `type:"gemini"` auth file is NOT dropped but preserved and normalized to the
+// native "gemini-cli" provider. Trunk/upstream removed the native gemini-cli
+// subsystem and dropped such files (plugin-only), but this fork restored the
+// native gemini-cli executor + catalog + service.go cases, so the auth must
+// survive synthesis and register on the gemini-cli provider (this is how the
+// live server serves gemini-2.5-pro through its gemini OAuth account).
+func TestFileSynthesizer_Synthesize_PreservesGeminiAsGeminiCLI(t *testing.T) {
 	tempDir := t.TempDir()
 
 	authData := map[string]any{
@@ -157,8 +164,17 @@ func TestFileSynthesizer_Synthesize_IgnoresGeminiProviderFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(auths) != 0 {
-		t.Fatalf("expected Gemini auth file to be ignored, got %d auths", len(auths))
+	if len(auths) != 1 {
+		t.Fatalf("expected Gemini auth file to be preserved, got %d auths", len(auths))
+	}
+	if got := auths[0].Provider; got != "gemini-cli" {
+		t.Fatalf("expected provider gemini-cli, got %q", got)
+	}
+	if got := auths[0].Label; got != "gemini@example.com" {
+		t.Errorf("expected label from email, got %q", got)
+	}
+	if auths[0].Status != coreauth.StatusActive {
+		t.Errorf("expected status active, got %s", auths[0].Status)
 	}
 }
 
@@ -554,7 +570,13 @@ func TestFileSynthesizer_Synthesize_OAuthModelAliases(t *testing.T) {
 	}
 }
 
-func TestFileSynthesizer_Synthesize_IgnoresGeminiOAuthFile(t *testing.T) {
+// TestFileSynthesizer_Synthesize_PreservesGeminiOAuthAsGeminiCLI asserts that a
+// full `type:"gemini"` OAuth account file (project_id + priority present) is
+// preserved and normalized to the native "gemini-cli" provider, with its OAuth
+// metadata and priority attribute retained so the native gemini-cli executor can
+// serve it. See TestFileSynthesizer_Synthesize_PreservesGeminiAsGeminiCLI for the
+// rationale behind reversing the trunk drop-gate in this fork.
+func TestFileSynthesizer_Synthesize_PreservesGeminiOAuthAsGeminiCLI(t *testing.T) {
 	tempDir := t.TempDir()
 
 	authData := map[string]any{
@@ -581,8 +603,18 @@ func TestFileSynthesizer_Synthesize_IgnoresGeminiOAuthFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(auths) != 0 {
-		t.Fatalf("expected Gemini auth file to be ignored, got %d auths", len(auths))
+	if len(auths) != 1 {
+		t.Fatalf("expected Gemini OAuth auth file to be preserved, got %d auths", len(auths))
+	}
+	if got := auths[0].Provider; got != "gemini-cli" {
+		t.Fatalf("expected provider gemini-cli, got %q", got)
+	}
+	if got := auths[0].Attributes["priority"]; got != "10" {
+		t.Errorf("expected priority 10, got %q", got)
+	}
+	// OAuth metadata (project_id, email) must be retained for the executor.
+	if got, _ := auths[0].Metadata["project_id"].(string); got != "project-a, project-b, project-c" {
+		t.Errorf("expected project_id retained, got %q", got)
 	}
 }
 

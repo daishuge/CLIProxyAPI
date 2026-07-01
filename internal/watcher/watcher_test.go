@@ -147,18 +147,30 @@ func TestSnapshotCoreAuths_ConfigAndAuthFiles(t *testing.T) {
 	w.SetConfig(cfg)
 
 	auths := w.SnapshotCoreAuths()
-	if len(auths) != 1 {
-		t.Fatalf("expected 1 config auth entry, got %d", len(auths))
+	// Two auths are expected: (1) the GeminiKey API-key auth synthesized from
+	// config, and (2) the file-based `type:"gemini"` OAuth auth preserved and
+	// normalized to the native gemini-cli provider. Trunk dropped the file (leaving
+	// only the API-key auth), but this fork restored the native gemini-cli
+	// subsystem so the OAuth file must survive synthesis.
+	if len(auths) != 2 {
+		t.Fatalf("expected 2 auth entries (config API key + preserved gemini-cli OAuth), got %d", len(auths))
 	}
 
 	var geminiAPIKeyAuth *coreauth.Auth
+	var geminiCLIFileAuth *coreauth.Auth
 	for _, a := range auths {
 		if a.Provider == "gemini" && a.Attributes["api_key"] == "g-key" {
 			geminiAPIKeyAuth = a
 		}
+		if a.Provider == "gemini-cli" {
+			geminiCLIFileAuth = a
+		}
 	}
 	if geminiAPIKeyAuth == nil {
 		t.Fatal("expected synthesized Gemini API key auth")
+	}
+	if geminiCLIFileAuth == nil {
+		t.Fatal("expected preserved file-based gemini OAuth auth on the gemini-cli provider")
 	}
 	expectedAPIKeyHash := diff.ComputeExcludedModelsHash([]string{"Model-A", "model-b"})
 	if geminiAPIKeyAuth.Attributes["excluded_models_hash"] != expectedAPIKeyHash {
