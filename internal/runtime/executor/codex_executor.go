@@ -744,7 +744,13 @@ func (e *CodexExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Auth
 	return httpClient.Do(httpReq)
 }
 
-func (e *CodexExecutor) doCodexRequestWithTransportRetry(ctx context.Context, auth *cliproxyauth.Auth, logInfo helps.UpstreamRequestLog, newRequest func() (*http.Request, error)) (*http.Response, error) {
+// doCodexRequestWithTransportRetry sends the Codex request built by newRequest and
+// retries a single time on transient upstream transport errors (e.g. EOF), a fix
+// ported from the work-track. The request is rebuilt for every attempt so header
+// mutations are never carried over. It preserves the trunk's Codex transport
+// behavior by dialing through the uTLS-fingerprinting client and by installing the
+// usage reporter's TTFT round-tripper on that client.
+func (e *CodexExecutor) doCodexRequestWithTransportRetry(ctx context.Context, auth *cliproxyauth.Auth, reporter *helps.UsageReporter, logInfo helps.UpstreamRequestLog, newRequest func() (*http.Request, error)) (*http.Response, error) {
 	if newRequest == nil {
 		return nil, fmt.Errorf("codex executor: request factory is nil")
 	}
@@ -758,7 +764,8 @@ func (e *CodexExecutor) doCodexRequestWithTransportRetry(ctx context.Context, au
 		attemptLog.Headers = httpReq.Header.Clone()
 		helps.RecordAPIRequest(ctx, e.cfg, attemptLog)
 
-		httpClient := helps.NewProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
+		httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
+		httpClient = reporter.TrackHTTPClient(httpClient)
 		httpResp, errDo := httpClient.Do(httpReq)
 		if errDo == nil {
 			return httpResp, nil
@@ -897,7 +904,10 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses"
-	var identityState codexIdentityConfuseState
+	// Build the request once up front so the upstream request body and the
+	// deterministic identity-confuse state are available for logging and for the
+	// response-side identity handling below. The transport-retry closure rebuilds
+	// an identical request per attempt (identity-confuse UUIDs are deterministic).
 	httpReq, upstreamBody, identityState, err := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
 	if err != nil {
 		return resp, err
@@ -910,7 +920,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -920,10 +930,16 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, reporter, logInfo, func() (*http.Request, error) {
+		attemptReq, _, attemptState, errReq := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(attemptReq, auth, apiKey, true, e.cfg)
+		applyCodexIdentityConfuseHeaders(attemptReq.Header, &attemptState)
+		return attemptReq, nil
 	})
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
-	httpClient = reporter.TrackHTTPClient(httpClient)
-	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		return resp, err
 	}
@@ -1069,7 +1085,8 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses/compact"
-	var identityState codexIdentityConfuseState
+	// Build once for logging and response-side identity handling; the retry closure
+	// rebuilds an identical request per attempt (identity-confuse UUIDs are deterministic).
 	httpReq, upstreamBody, identityState, err := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
 	if err != nil {
 		return resp, err
@@ -1082,7 +1099,7 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -1092,10 +1109,16 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, reporter, logInfo, func() (*http.Request, error) {
+		attemptReq, _, attemptState, errReq := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(attemptReq, auth, apiKey, false, e.cfg)
+		applyCodexIdentityConfuseHeaders(attemptReq.Header, &attemptState)
+		return attemptReq, nil
 	})
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
-	httpClient = reporter.TrackHTTPClient(httpClient)
-	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		return resp, err
 	}
@@ -1183,7 +1206,8 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	reporter.SetTranslatedReasoningEffort(body, to.String())
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses"
-	var identityState codexIdentityConfuseState
+	// Build once for logging and response-side identity handling; the retry closure
+	// rebuilds an identical request per attempt (identity-confuse UUIDs are deterministic).
 	httpReq, upstreamBody, identityState, err := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
 	if err != nil {
 		return nil, err
@@ -1196,7 +1220,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -1206,10 +1230,16 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, reporter, logInfo, func() (*http.Request, error) {
+		attemptReq, _, attemptState, errReq := e.cacheHelper(ctx, from, url, auth, req, originalPayloadSource, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(attemptReq, auth, apiKey, true, e.cfg)
+		applyCodexIdentityConfuseHeaders(attemptReq.Header, &attemptState)
+		return attemptReq, nil
 	})
-	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
-	httpClient = reporter.TrackHTTPClient(httpClient)
-	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
