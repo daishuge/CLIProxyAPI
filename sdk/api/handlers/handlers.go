@@ -1586,7 +1586,16 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 		resolvedModelName = fastModel
 	}
 
-	parsed := thinking.ParseSuffix(resolvedModelName)
+	// Use the hyphen-aware, registry-scoped resolver so convenience aliases like
+	// "claude-opus-4-8-high" (and the 48 relay ch1/ch4 hyphen-suffix models) strip
+	// the trailing "-high/-low/-medium/-xhigh" level to the registered base model
+	// for provider resolution. Parenthesis-only ParseSuffix left the literal
+	// "...-high" unregistered -> util.GetProviderName found no provider -> 502.
+	// No provider hint is passed because the provider is exactly what we are about
+	// to resolve; ParseSuffixForModel then consults the global registry (with a
+	// static-definitions fallback). The full suffixed model is still returned as
+	// resolvedModelName so the executor applies the thinking level downstream.
+	parsed := thinking.ParseSuffixForModel(resolvedModelName)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 
 	if errMsg := h.validateImageOnlyModel(baseModel, allowImageModel); errMsg != nil {

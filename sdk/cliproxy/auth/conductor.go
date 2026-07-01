@@ -995,7 +995,18 @@ func (m *Manager) lookupAPIKeyUpstreamModel(authID, requestedModel string) strin
 	if len(byAlias) == 0 {
 		return ""
 	}
-	key := strings.ToLower(thinking.ParseSuffix(requestedModel).ModelName)
+	// Explicit alias wins over suffix parsing: try the FULL requested model first
+	// so a literal hyphen alias like "explicit-high" maps to its configured
+	// upstream verbatim (no request-suffix re-attachment). Only if that misses do
+	// we strip a "-high/-low/..." convenience level and look up the base alias,
+	// re-attaching the level via preserveRequestedModelSuffix (unless the resolved
+	// name already encodes one).
+	if fullKey := strings.ToLower(strings.TrimSpace(requestedModel)); fullKey != "" {
+		if resolved := strings.TrimSpace(byAlias[fullKey]); resolved != "" {
+			return resolved
+		}
+	}
+	key := strings.ToLower(parseRequestModelSuffix(requestedModel).ModelName)
 	if key == "" {
 		key = strings.ToLower(requestedModel)
 	}
@@ -1115,7 +1126,7 @@ func (m *Manager) resolveOpenAICompatUpstreamModelPool(auth *Auth, requestedMode
 }
 
 func preserveRequestedModelSuffix(requestedModel, resolved string) string {
-	return preserveResolvedModelSuffix(resolved, thinking.ParseSuffix(requestedModel))
+	return preserveResolvedModelSuffix(resolved, parseRequestModelSuffix(requestedModel))
 }
 
 func (m *Manager) executionModelCandidates(auth *Auth, routeModel string) []string {

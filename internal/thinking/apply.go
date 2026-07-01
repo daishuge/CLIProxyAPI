@@ -181,8 +181,13 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 		return body, nil
 	}
 
-	// 2. Parse suffix and get modelInfo
-	suffixResult := ParseSuffix(model)
+	// 2. Parse suffix and get modelInfo.
+	// Use the hyphen-aware, registry-scoped resolver (scoped to providerKey) so a
+	// convenience alias such as "gpt-5.3-codex-spark-high" resolves to base
+	// "gpt-5.3-codex-spark" with RawSuffix "high" and the effort level is applied.
+	// Parenthesis-only ParseSuffix left the literal "...-high" as the base, which
+	// the registry treats as user-defined -> the level was silently ignored.
+	suffixResult := ParseSuffixForModel(model, providerKey)
 	baseModel := suffixResult.ModelName
 	// Use provider-specific lookup to handle capability differences across providers.
 	modelInfo := registry.LookupModelInfo(baseModel, providerKey)
@@ -434,7 +439,9 @@ func hasThinkingConfig(config ThinkingConfig) bool {
 // reasoning_effort label for usage logging. Model suffixes have the same
 // priority as ApplyThinking: a valid suffix overrides body fields.
 func ExtractReasoningEffort(body []byte, provider, model string) string {
-	if effort := reasoningEffortFromSuffix(ParseSuffix(model)); effort != "" {
+	// Hyphen-aware so a "-high/-low/..." convenience alias yields the correct
+	// reasoning_effort label for usage logging, consistent with ApplyThinking.
+	if effort := reasoningEffortFromSuffix(ParseSuffixForModel(model, provider)); effort != "" {
 		return effort
 	}
 

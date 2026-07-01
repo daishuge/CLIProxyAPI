@@ -102,12 +102,32 @@ func (m *Manager) applyOAuthModelAlias(auth *Auth, requestedModel string) string
 	return upstreamModel
 }
 
+// parseRequestModelSuffix parses the thinking suffix from a REQUESTED model (an
+// alias or upstream name typed by the client). It uses ParseSuffixAllowHyphen so
+// convenience hyphen level aliases ("spark-high", "g25p-fast-low") reduce to the
+// base alias for lookup, in addition to the parenthesized form. The hyphen strip
+// is intentionally unconditional (registry-agnostic) here because alias names are
+// config-defined and not present in the model registry; numeric budgets remain
+// parenthesis-only via ParseSuffixAllowHyphen so ordinary hyphenated IDs are safe.
+func parseRequestModelSuffix(model string) thinking.SuffixResult {
+	return thinking.ParseSuffixAllowHyphen(model)
+}
+
+// modelNameHasThinkingSuffix reports whether a resolved upstream/config model name
+// already carries a thinking suffix, in either the parenthesized form
+// ("...-20250514(low)") or a hyphen level form ("gpt-5.3-codex-spark-high"). When
+// true, the configured name's own suffix takes priority and the request suffix
+// must NOT be re-attached.
+func modelNameHasThinkingSuffix(name string) bool {
+	return thinking.ParseSuffixAllowHyphen(name).HasSuffix
+}
+
 func modelAliasLookupCandidates(requestedModel string) (thinking.SuffixResult, []string) {
 	requestedModel = strings.TrimSpace(requestedModel)
 	if requestedModel == "" {
 		return thinking.SuffixResult{}, nil
 	}
-	requestResult := thinking.ParseSuffix(requestedModel)
+	requestResult := parseRequestModelSuffix(requestedModel)
 	base := requestResult.ModelName
 	if base == "" {
 		base = requestedModel
@@ -124,7 +144,10 @@ func preserveResolvedModelSuffix(resolved string, requestResult thinking.SuffixR
 	if resolved == "" {
 		return ""
 	}
-	if thinking.ParseSuffix(resolved).HasSuffix {
+	// Config priority: if the resolved name already encodes a thinking level
+	// (parenthesized or hyphen form), keep it verbatim and do not override with
+	// the request suffix.
+	if modelNameHasThinkingSuffix(resolved) {
 		return resolved
 	}
 	if requestResult.HasSuffix && requestResult.RawSuffix != "" {
@@ -394,9 +417,15 @@ func resolveUpstreamModelFromAliasTable(m *Manager, auth *Auth, requestedModel, 
 		return OAuthModelAliasResult{}
 	}
 
-	requestResult := thinking.ParseSuffix(requestedModel)
+	requestResult := parseRequestModelSuffix(requestedModel)
 	baseModel := requestResult.ModelName
 
+	// Candidate order: the suffix-stripped base first (so a "-high/(8192)" request
+	// resolves the base alias and re-attaches the level), then the FULL requested
+	// string so an explicit hyphen alias like "explicit-high" still matches when it
+	// is itself a configured alias. explicitMatch tracks whether the FULL string
+	// matched: in that case the request "suffix" is actually part of the alias name
+	// and must NOT be re-attached to the resolved upstream.
 	candidates := []string{baseModel}
 	if baseModel != requestedModel {
 		candidates = append(candidates, requestedModel)
@@ -427,22 +456,37 @@ func resolveUpstreamModelFromAliasTable(m *Manager, auth *Auth, requestedModel, 
 			continue
 		}
 
+		// Suffix to re-attach depends on which candidate matched:
+		//   - base match: the full request suffix (parenthesized OR hyphen level),
+		//     since the level was stripped to find the base alias.
+		//   - full-string match: only a PARENTHESIZED suffix is a real thinking
+		//     budget to pass through (e.g. "gemini-2.5-pro(8192)"); a hyphen level
+		//     is part of the explicit alias identity (e.g. "explicit-high") and
+		//     must not be re-attached.
+		effectiveSuffix := requestResult
+		if !strings.EqualFold(candidate, baseModel) {
+			effectiveSuffix = thinking.ParseSuffix(requestedModel)
+		}
+
 		if strings.EqualFold(targetModel, baseModel) {
 			if !entry.forceMapping {
 				return OAuthModelAliasResult{}
 			}
 			return OAuthModelAliasResult{
-				UpstreamModel: preserveResolvedModelSuffix(targetModel, requestResult),
+				UpstreamModel: preserveResolvedModelSuffix(targetModel, effectiveSuffix),
 				ForceMapping:  entry.forceMapping,
 				OriginalAlias: oauthModelAliasForceMappingResponseModel(entry.configAlias),
 			}
 		}
 
+		// Config priority: a target that already carries a thinking level
+		// (parenthesized or hyphen form) keeps its own suffix; otherwise re-attach
+		// the request suffix in canonical parenthesized form.
 		var upstreamModel string
-		if thinking.ParseSuffix(targetModel).HasSuffix {
+		if modelNameHasThinkingSuffix(targetModel) {
 			upstreamModel = targetModel
-		} else if requestResult.HasSuffix && requestResult.RawSuffix != "" {
-			upstreamModel = targetModel + "(" + requestResult.RawSuffix + ")"
+		} else if effectiveSuffix.HasSuffix && effectiveSuffix.RawSuffix != "" {
+			upstreamModel = targetModel + "(" + effectiveSuffix.RawSuffix + ")"
 		} else {
 			upstreamModel = targetModel
 		}
