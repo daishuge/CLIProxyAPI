@@ -631,7 +631,7 @@ func TestEnsureAccessToken_WarmTokenLoadsCreditsHint(t *testing.T) {
 		},
 	}
 	ctx := context.WithValue(context.Background(), "cliproxy.roundtripper", roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.String() != "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist" {
+		if req.URL.String() != antigravityBaseURLDaily+"/v1internal:loadCodeAssist" {
 			t.Fatalf("unexpected request url %s", req.URL.String())
 		}
 		return &http.Response{
@@ -682,7 +682,7 @@ func TestUpdateAntigravityCreditsBalance_LoadCodeAssistUserAgent(t *testing.T) {
 		Attributes: map[string]string{"user_agent": configuredUserAgent},
 	}
 	ctx := context.WithValue(context.Background(), "cliproxy.roundtripper", roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-		if req.URL.String() != "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist" {
+		if req.URL.String() != antigravityBaseURLDaily+"/v1internal:loadCodeAssist" {
 			t.Fatalf("unexpected request url %s", req.URL.String())
 		}
 		if got := req.Header.Get("User-Agent"); got != loadCodeAssistUserAgent {

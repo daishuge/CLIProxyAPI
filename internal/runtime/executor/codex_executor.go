@@ -6,8 +6,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"sort"
 	"strings"
@@ -38,9 +40,12 @@ const (
 	codexUserAgent             = "codex-tui/0.135.0 (Mac OS 26.5.0; arm64) iTerm.app/3.6.10 (codex-tui; 0.135.0)"
 	codexOriginator            = "codex-tui"
 	codexDefaultImageToolModel = "gpt-image-2"
+	codexTransportRetryLimit   = 1
 )
 
 var dataTag = []byte("data:")
+
+var codexTransientTransportRetryDelay = defaultCodexTransientTransportRetryDelay
 
 // Streamed Codex responses may emit response.output_item.done events while leaving
 // response.completed.response.output empty. Keep the stream path aligned with the
@@ -739,6 +744,104 @@ func (e *CodexExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Auth
 	return httpClient.Do(httpReq)
 }
 
+func (e *CodexExecutor) doCodexRequestWithTransportRetry(ctx context.Context, auth *cliproxyauth.Auth, logInfo helps.UpstreamRequestLog, newRequest func() (*http.Request, error)) (*http.Response, error) {
+	if newRequest == nil {
+		return nil, fmt.Errorf("codex executor: request factory is nil")
+	}
+	var lastErr error
+	for attempt := 0; attempt <= codexTransportRetryLimit; attempt++ {
+		httpReq, errReq := newRequest()
+		if errReq != nil {
+			return nil, errReq
+		}
+		attemptLog := logInfo
+		attemptLog.Headers = httpReq.Header.Clone()
+		helps.RecordAPIRequest(ctx, e.cfg, attemptLog)
+
+		httpClient := helps.NewProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
+		httpResp, errDo := httpClient.Do(httpReq)
+		if errDo == nil {
+			return httpResp, nil
+		}
+		helps.RecordAPIResponseError(ctx, e.cfg, errDo)
+		lastErr = errDo
+		if attempt >= codexTransportRetryLimit || !isRetryableCodexTransportError(errDo) {
+			break
+		}
+		delay := codexTransientTransportRetryDelay()
+		log.WithFields(log.Fields{
+			"attempt":  attempt + 1,
+			"provider": e.Identifier(),
+			"delay_ms": delay.Milliseconds(),
+		}).Warnf("codex executor: retrying transient upstream transport error: %v", errDo)
+		if errWait := waitCodexTransportRetry(ctx, delay); errWait != nil {
+			return nil, errWait
+		}
+	}
+	return nil, newCodexTransportErr(lastErr)
+}
+
+func waitCodexTransportRetry(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func defaultCodexTransientTransportRetryDelay() time.Duration {
+	return 150*time.Millisecond + time.Duration(rand.Int63n(int64(350*time.Millisecond)))
+}
+
+func isRetryableCodexTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	msg := strings.ToLower(strings.TrimSpace(err.Error()))
+	if msg == "" {
+		return false
+	}
+	retryableMarkers := []string{
+		"connection reset by peer",
+		"server closed idle connection",
+		"use of closed network connection",
+		"unexpected eof",
+		"stream error",
+		"http2: server sent goaway",
+		"tls: bad record mac",
+	}
+	for _, marker := range retryableMarkers {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return msg == "eof" || strings.HasSuffix(msg, ": eof")
+}
+
+func newCodexTransportErr(err error) statusErr {
+	message := "upstream transport error"
+	if err != nil {
+		message = fmt.Sprintf("upstream transport error: %s", err.Error())
+	}
+	body := []byte(`{"error":{}}`)
+	body, _ = sjson.SetBytes(body, "error.message", message)
+	body, _ = sjson.SetBytes(body, "error.type", "server_error")
+	body, _ = sjson.SetBytes(body, "error.code", "upstream_transport_eof")
+	return statusErr{code: http.StatusBadGateway, msg: string(body)}
+}
+
 func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
 	if opts.Alt == "responses/compact" {
 		return e.executeCompact(ctx, auth, req, opts)
@@ -807,7 +910,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -817,12 +920,19 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
+		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
+		return httpReq, nil
 	})
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		helps.RecordAPIResponseError(ctx, e.cfg, err)
 		return resp, err
 	}
 	defer func() {
@@ -927,7 +1037,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 }
 
 func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey, baseURL := codexCreds(auth)
 	if baseURL == "" {
@@ -980,7 +1090,7 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -990,12 +1100,19 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
+		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(httpReq, auth, apiKey, false, e.cfg)
+		return httpReq, nil
 	})
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		helps.RecordAPIResponseError(ctx, e.cfg, err)
 		return resp, err
 	}
 	defer func() {
@@ -1095,7 +1212,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
+	logInfo := helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -1105,13 +1222,20 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
+	}
+	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
+		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
+		if errReq != nil {
+			return nil, errReq
+		}
+		applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
+		return httpReq, nil
 	})
 
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		helps.RecordAPIResponseError(ctx, e.cfg, err)
 		return nil, err
 	}
 	helps.RecordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
@@ -1208,7 +1332,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 }
 
 func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	from := opts.SourceFormat
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
@@ -1611,7 +1735,11 @@ func applyCodexHeadersFromSources(r *http.Request, auth *cliproxyauth.Auth, toke
 	misc.EnsureHeader(r.Header, ginHeaders, "Version", "")
 	misc.EnsureHeader(r.Header, ginHeaders, "X-Codex-Turn-Metadata", "")
 	misc.EnsureHeader(r.Header, ginHeaders, "X-Client-Request-Id", "")
+	isAPIKey := codexAuthUsesAPIKey(auth)
 	cfgUserAgent, _ := codexHeaderDefaults(cfg, auth)
+	if !isAPIKey && strings.TrimSpace(cfgUserAgent) == "" {
+		cfgUserAgent = codexUserAgent
+	}
 	ensureHeaderWithConfigPrecedence(r.Header, ginHeaders, "User-Agent", cfgUserAgent, codexUserAgent)
 
 	if strings.Contains(r.Header.Get("User-Agent"), "Mac OS") {
@@ -1625,12 +1753,6 @@ func applyCodexHeadersFromSources(r *http.Request, auth *cliproxyauth.Auth, toke
 	}
 	r.Header.Set("Connection", "Keep-Alive")
 
-	isAPIKey := false
-	if auth != nil && auth.Attributes != nil {
-		if v := strings.TrimSpace(auth.Attributes["api_key"]); v != "" {
-			isAPIKey = true
-		}
-	}
 	if originator := strings.TrimSpace(ginHeaders.Get("Originator")); originator != "" {
 		r.Header.Set("Originator", originator)
 	} else if !isAPIKey {

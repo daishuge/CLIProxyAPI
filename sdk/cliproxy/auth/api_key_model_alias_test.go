@@ -16,6 +16,8 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 				Models: []internalconfig.GeminiModel{
 					{Name: "gemini-2.5-pro-exp-03-25", Alias: "g25p"},
 					{Name: "gemini-2.5-flash(low)", Alias: "g25f"},
+					{Name: "gemini-2.5-pro-high", Alias: "g25p-fast"},
+					{Name: "explicit-upstream", Alias: "explicit-high"},
 				},
 			},
 		},
@@ -35,11 +37,14 @@ func TestLookupAPIKeyUpstreamModel(t *testing.T) {
 	}{
 		// Fast path + suffix preservation
 		{"alias with suffix", "a1", "g25p(8192)", "gemini-2.5-pro-exp-03-25(8192)"},
+		{"alias with hyphen suffix", "a1", "g25p-high", "gemini-2.5-pro-exp-03-25(high)"},
 		{"alias without suffix", "a1", "g25p", "gemini-2.5-pro-exp-03-25"},
+		{"explicit hyphen alias wins", "a1", "explicit-high", "explicit-upstream"},
 
 		// Config suffix takes priority
 		{"config suffix priority", "a1", "g25f(high)", "gemini-2.5-flash(low)"},
 		{"config suffix no user suffix", "a1", "g25f", "gemini-2.5-flash(low)"},
+		{"hyphen config suffix priority", "a1", "g25p-fast-low", "gemini-2.5-pro-high"},
 
 		// Case insensitive
 		{"uppercase alias", "a1", "G25P", "gemini-2.5-pro-exp-03-25"},

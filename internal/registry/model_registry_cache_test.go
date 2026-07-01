@@ -98,3 +98,29 @@ func TestGetAvailableModelsInvalidatesCacheOnRegistryChanges(t *testing.T) {
 		t.Fatalf("expected model to reappear after resume, got %d", len(models))
 	}
 }
+
+func TestGetAvailableModelsSortsByID(t *testing.T) {
+	r := newTestModelRegistry()
+	r.RegisterClient("client-1", "OpenAI", []*ModelInfo{
+		{ID: "zeta", OwnedBy: "team-a"},
+		{ID: "alpha", OwnedBy: "team-a"},
+		{ID: "middle", OwnedBy: "team-a"},
+	})
+
+	models := r.GetAvailableModels("openai")
+	if len(models) != 3 {
+		t.Fatalf("expected 3 models, got %d", len(models))
+	}
+
+	got := []string{
+		models[0]["id"].(string),
+		models[1]["id"].(string),
+		models[2]["id"].(string),
+	}
+	want := []string{"alpha", "middle", "zeta"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("models sorted by id = %v, want %v", got, want)
+		}
+	}
+}

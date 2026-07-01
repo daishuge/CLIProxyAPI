@@ -842,3 +842,16 @@ func TestToolsDefinitionTranslated(t *testing.T) {
 		t.Errorf("tool 'search' not found in output tools: %s", gjson.Get(result, "tools").Raw)
 	}
 }
+
+func TestConvertOpenAIRequestToCodex_NormalizesServiceTierFast(t *testing.T) {
+	input := []byte(`{
+		"model": "gpt-5.5",
+		"service_tier": "fast",
+		"messages": [{"role": "user", "content": "hello"}]
+	}`)
+
+	out := ConvertOpenAIRequestToCodex("gpt-5.5", input, true)
+	if got := gjson.GetBytes(out, "service_tier").String(); got != "priority" {
+		t.Fatalf("service_tier = %q, want priority. Output: %s", got, string(out))
+	}
+}

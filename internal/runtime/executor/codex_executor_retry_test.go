@@ -1,11 +1,22 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/translator"
+	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+	"github.com/tidwall/gjson"
 )
 
 func TestParseCodexRetryAfter(t *testing.T) {
@@ -193,6 +204,64 @@ func TestNewCodexStatusErrPreservesUnclassifiedErrors(t *testing.T) {
 	}
 	if got := err.Error(); got != string(body) {
 		t.Fatalf("error body = %s, want original %s", got, string(body))
+	}
+}
+
+func TestCodexTransportErrClassifiesEOFAsBadGateway(t *testing.T) {
+	err := newCodexTransportErr(io.EOF)
+
+	if got := err.StatusCode(); got != http.StatusBadGateway {
+		t.Fatalf("status code = %d, want %d", got, http.StatusBadGateway)
+	}
+	assertCodexErrorCode(t, err.Error(), "server_error", "upstream_transport_eof")
+}
+
+func TestCodexExecutorExecuteRetriesTransientTransportEOF(t *testing.T) {
+	originalDelay := codexTransientTransportRetryDelay
+	codexTransientTransportRetryDelay = func() time.Duration { return 0 }
+	defer func() { codexTransientTransportRetryDelay = originalDelay }()
+
+	var attempts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if attempts.Add(1) == 1 {
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				t.Fatal("response writer does not support hijacking")
+			}
+			conn, _, err := hijacker.Hijack()
+			if err != nil {
+				t.Fatalf("hijack failed: %v", err)
+			}
+			_ = conn.Close()
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_1\",\"object\":\"response\",\"created_at\":1775555723,\"status\":\"completed\",\"model\":\"gpt-5.4-mini-2026-03-17\",\"output\":[{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"ok\"}]}],\"usage\":{\"input_tokens\":8,\"output_tokens\":2,\"total_tokens\":10}}}\n\n"))
+	}))
+	defer server.Close()
+
+	executor := NewCodexExecutor(&config.Config{})
+	auth := &cliproxyauth.Auth{Attributes: map[string]string{
+		"base_url": server.URL,
+		"api_key":  "test",
+	}}
+
+	resp, err := executor.Execute(context.Background(), auth, cliproxyexecutor.Request{
+		Model:   "gpt-5.4-mini",
+		Payload: []byte(`{"model":"gpt-5.4-mini","messages":[{"role":"user","content":"Say ok"}]}`),
+	}, cliproxyexecutor.Options{
+		SourceFormat: sdktranslator.FromString("openai"),
+		Stream:       false,
+	})
+	if err != nil {
+		t.Fatalf("Execute error: %v", err)
+	}
+	if got := attempts.Load(); got != 2 {
+		t.Fatalf("attempts = %d, want 2", got)
+	}
+	gotContent := gjson.GetBytes(resp.Payload, "choices.0.message.content").String()
+	if gotContent != "ok" {
+		t.Fatalf("choices.0.message.content = %q, want ok; payload=%s", gotContent, string(resp.Payload))
 	}
 }
 

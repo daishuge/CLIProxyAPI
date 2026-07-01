@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v6/internal/translator/codex/compat"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -62,6 +63,9 @@ func ConvertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	out, _ = sjson.SetBytes(out, "parallel_tool_calls", true)
 	out, _ = sjson.SetBytes(out, "reasoning.summary", "auto")
 	out, _ = sjson.SetBytes(out, "include", []string{"reasoning.encrypted_content"})
+	if serviceTier, ok := codexcompat.NormalizeServiceTierValue(gjson.GetBytes(rawJSON, "service_tier").String()); ok {
+		out, _ = sjson.SetBytes(out, "service_tier", serviceTier)
+	}
 
 	// Model
 	out, _ = sjson.SetBytes(out, "model", modelName)

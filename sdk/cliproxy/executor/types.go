@@ -11,6 +11,9 @@ import (
 // RequestedModelMetadataKey stores the client-requested model name in Options.Metadata.
 const RequestedModelMetadataKey = "requested_model"
 
+// ReasoningEffortMetadataKey stores the client-requested reasoning effort in Options.Metadata.
+const ReasoningEffortMetadataKey = "reasoning_effort"
+
 // RequestPathMetadataKey stores the inbound HTTP request path (e.g. "/v1/images/generations") in Options.Metadata.
 // It is optional and may be absent for non-HTTP executions.
 const RequestPathMetadataKey = "request_path"

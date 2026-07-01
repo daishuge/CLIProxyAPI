@@ -1106,7 +1106,7 @@ func responsesWebsocketAuthAvailableForModel(auth *coreauth.Auth, modelName stri
 	if modelName != "" && len(auth.ModelStates) > 0 {
 		state, ok := auth.ModelStates[modelName]
 		if (!ok || state == nil) && modelName != "" {
-			baseModel := strings.TrimSpace(thinking.ParseSuffix(modelName).ModelName)
+			baseModel := strings.TrimSpace(thinking.ParseSuffixForModel(modelName).ModelName)
 			if baseModel != "" && baseModel != modelName {
 				state, ok = auth.ModelStates[baseModel]
 			}

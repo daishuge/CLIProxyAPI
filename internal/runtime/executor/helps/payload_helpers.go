@@ -467,7 +467,7 @@ func payloadModelCandidates(model, requestedModel string) []string {
 		addCandidate(model)
 	}
 	if requestedModel != "" {
-		parsed := thinking.ParseSuffix(requestedModel)
+		parsed := thinking.ParseSuffixForModel(requestedModel)
 		base := strings.TrimSpace(parsed.ModelName)
 		if base != "" {
 			addCandidate(base)

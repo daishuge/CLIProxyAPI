@@ -1,0 +1,66 @@
+{
+  "currency": "USD",
+  "unit": "1M tokens",
+  "source": "https://openai.com/api/pricing/",
+  "updated_at": "2026-05-24",
+  "notes": "Standard API processing rates copied into PPAP for local cost estimation. GPT-5.3-Codex-Spark uses the local Codex preview estimate of $0.01 input, $0 cached input, and $0.01 output per 1M tokens.",
+  "models": {
+    "gpt-5.5": {
+      "input": 5,
+      "cached_input": 0.5,
+      "output": 30,
+      "aliases": ["gpt-5.5-low-fast", "gpt-5.5-medium-fast", "gpt-5.5-high-fast", "gpt-5.5-xhigh-fast"]
+    },
+    "gpt-5.4": {
+      "input": 2.5,
+      "cached_input": 0.25,
+      "output": 15
+    },
+    "gpt-5.4-mini": {
+      "input": 0.75,
+      "cached_input": 0.075,
+      "output": 4.5
+    },
+    "gpt-5.4-nano": {
+      "input": 0.2,
+      "cached_input": 0.02,
+      "output": 1.25
+    },
+    "gpt-5.3-codex": {
+      "input": 1.75,
+      "cached_input": 0.175,
+      "output": 14
+    },
+    "gpt-5.3-codex-spark": {
+      "input": 0.01,
+      "cached_input": 0,
+      "output": 0.01,
+      "aliases": [
+        "gpt-5.3-codex-spark-low",
+        "gpt-5.3-codex-spark-medium",
+        "gpt-5.3-codex-spark-high",
+        "gpt-5.3-codex-spark-xhigh"
+      ]
+    },
+    "gpt-5": {
+      "input": 1.25,
+      "cached_input": 0.125,
+      "output": 10
+    },
+    "gpt-5-mini": {
+      "input": 0.25,
+      "cached_input": 0.025,
+      "output": 2
+    },
+    "gpt-5-nano": {
+      "input": 0.05,
+      "cached_input": 0.005,
+      "output": 0.4
+    },
+    "gpt-5-pro": {
+      "input": 15,
+      "cached_input": 0,
+      "output": 120
+    }
+  }
+}

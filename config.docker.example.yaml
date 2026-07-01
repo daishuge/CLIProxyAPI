@@ -1,0 +1,74 @@
+# Docker-oriented PPAP configuration.
+# Copy this file to config.yaml before running docker compose.
+
+host: ""
+port: 8317
+
+remote-management:
+  # Docker bridge traffic is non-local from the container point of view.
+  allow-remote: true
+
+  # Replace this before exposing the management panel beyond your local machine.
+  # Plaintext values are hashed into config.yaml on startup.
+  secret-key: "change-me-management-key"
+
+  disable-control-panel: false
+  disable-auto-update-panel: true
+  panel-github-repository: "https://github.com/daishuge/playful-proxy-api-panel"
+
+auth-dir: "/root/.cli-proxy-api"
+
+api-keys:
+  - "change-me-api-key"
+
+# Optional per-key model, prompt, and usage controls. Keys without an entry keep the legacy unrestricted behavior.
+api-key-controls:
+  - name: "default"
+    api-key: "change-me-api-key"
+    models:
+      - "*"
+    unlimited: true
+    # Request, token, and estimated USD budgets require usage-statistics-enabled.
+    max-cost-usd: 0
+    # Optional per-key preset prompt. When present, this overrides the global preset-prompt block for this API key.
+    # preset-prompt:
+    #   enabled: true
+    #   prompt: ""
+    #   max-bytes: 32768
+
+debug: false
+logging-to-file: true
+logs-max-total-size-mb: 1024
+error-logs-max-files: 20
+
+usage-statistics-enabled: true
+usage-statistics-path: "/CLIProxyAPI/data/usage-statistics.json"
+usage-statistics-flush-interval-seconds: 30
+redis-usage-queue-retention-seconds: 60
+
+conversation-log:
+  enabled: false
+  directory: "/CLIProxyAPI/data/conversation-logs"
+  max-file-size-mb: 16
+  max-total-size-mb: 256
+  max-entry-bytes: 2097152
+
+preset-prompt:
+  enabled: false
+  prompt: ""
+  max-bytes: 32768
+
+proxy-url: ""
+force-model-prefix: false
+request-retry: 3
+max-retry-credentials: 0
+max-retry-interval: 30
+disable-cooling: false
+
+# Require API key authentication for /v1/ws by default in Docker deployments.
+ws-auth: true
+
+upstream-concurrency:
+  default: 0
+  providers: {}
+  queue-timeout-seconds: 30

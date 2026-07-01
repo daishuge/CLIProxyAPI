@@ -149,7 +149,7 @@ func (e *invalidJSONStreamExecutor) Execute(context.Context, *coreauth.Auth, cor
 
 func (e *invalidJSONStreamExecutor) ExecuteStream(context.Context, *coreauth.Auth, coreexecutor.Request, coreexecutor.Options) (*coreexecutor.StreamResult, error) {
 	ch := make(chan coreexecutor.StreamChunk, 1)
-	ch <- coreexecutor.StreamChunk{Payload: []byte("event: response.completed\ndata: {\"type\"")}
+	ch <- coreexecutor.StreamChunk{Payload: []byte("event: response.completed\ndata: {\"type\":\"T18_INTERNAL_PRESET_PROMPT_SHOULD_NOT_LEAK\"")}
 	close(ch)
 	return &coreexecutor.StreamResult{Chunks: ch}, nil
 }
@@ -705,6 +705,9 @@ func TestExecuteStreamWithAuthManager_ValidatesOpenAIResponsesStreamDataJSON(t *
 		}
 		if msg.Error == nil {
 			t.Fatalf("expected error")
+		}
+		if strings.Contains(msg.Error.Error(), "T18_INTERNAL_PRESET_PROMPT_SHOULD_NOT_LEAK") {
+			t.Fatalf("invalid SSE error leaked upstream data: %q", msg.Error.Error())
 		}
 		gotErr = true
 	}

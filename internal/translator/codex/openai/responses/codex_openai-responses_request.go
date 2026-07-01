@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v6/internal/translator/codex/compat"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -27,11 +28,7 @@ func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte,
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "max_completion_tokens")
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "temperature")
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "top_p")
-	if v := gjson.GetBytes(rawJSON, "service_tier"); v.Exists() {
-		if v.String() != "priority" {
-			rawJSON, _ = sjson.DeleteBytes(rawJSON, "service_tier")
-		}
-	}
+	rawJSON = codexcompat.NormalizeServiceTier(rawJSON)
 
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "truncation")
 	rawJSON = applyResponsesCompactionCompatibility(rawJSON)

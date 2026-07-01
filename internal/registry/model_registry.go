@@ -71,6 +71,10 @@ type ModelInfo struct {
 	// array (e.g., openai-compatibility.*.models[], *-api-key.models[]).
 	// UserDefined models have thinking configuration passed through without validation.
 	UserDefined bool `json:"-"`
+
+	// ThinkingAliasBase records the visible base model for auto-generated
+	// thinking-level aliases such as "model-high".
+	ThinkingAliasBase string `json:"-"`
 }
 
 type availableModelsCacheEntry struct {
@@ -840,7 +844,18 @@ func (r *ModelRegistry) buildAvailableModelsLocked(handlerType string, now time.
 		}
 	}
 
+	sort.SliceStable(models, func(i, j int) bool {
+		return modelIDFromMap(models[i]) < modelIDFromMap(models[j])
+	})
 	return models, expiresAt
+}
+
+func modelIDFromMap(model map[string]any) string {
+	if model == nil {
+		return ""
+	}
+	id, _ := model["id"].(string)
+	return id
 }
 
 func cloneModelMaps(models []map[string]any) []map[string]any {

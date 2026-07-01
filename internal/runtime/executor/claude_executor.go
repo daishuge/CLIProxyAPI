@@ -199,7 +199,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	if opts.Alt == "responses/compact" {
 		return resp, statusErr{code: http.StatusNotImplemented, msg: "/responses/compact not supported"}
 	}
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey, baseURL := claudeCreds(auth)
 	if baseURL == "" {
@@ -392,7 +392,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	if opts.Alt == "responses/compact" {
 		return nil, statusErr{code: http.StatusNotImplemented, msg: "/responses/compact not supported"}
 	}
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey, baseURL := claudeCreds(auth)
 	if baseURL == "" {
@@ -675,7 +675,7 @@ func validateClaudeStreamingResponse(data []byte) error {
 }
 
 func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey, baseURL := claudeCreds(auth)
 	if baseURL == "" {

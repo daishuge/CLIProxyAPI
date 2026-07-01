@@ -225,6 +225,32 @@ func TestConvertOpenAIResponsesRequestToCodex_OriginalIssue(t *testing.T) {
 	}
 }
 
+func TestConvertOpenAIResponsesRequestToCodex_NormalizesServiceTierFast(t *testing.T) {
+	inputJSON := []byte(`{
+		"model": "gpt-5.5-codex",
+		"service_tier": "fast",
+		"input": "hello"
+	}`)
+
+	output := ConvertOpenAIResponsesRequestToCodex("gpt-5.5-codex", inputJSON, false)
+	if got := gjson.GetBytes(output, "service_tier").String(); got != "priority" {
+		t.Fatalf("service_tier = %q, want priority. Output: %s", got, string(output))
+	}
+}
+
+func TestConvertOpenAIResponsesRequestToCodex_DropsUnsupportedServiceTier(t *testing.T) {
+	inputJSON := []byte(`{
+		"model": "gpt-5.5-codex",
+		"service_tier": "default",
+		"input": "hello"
+	}`)
+
+	output := ConvertOpenAIResponsesRequestToCodex("gpt-5.5-codex", inputJSON, false)
+	if gjson.GetBytes(output, "service_tier").Exists() {
+		t.Fatalf("service_tier should be removed. Output: %s", string(output))
+	}
+}
+
 // TestConvertSystemRoleToDeveloper_AssistantRole tests that assistant role is preserved
 func TestConvertSystemRoleToDeveloper_AssistantRole(t *testing.T) {
 	inputJSON := []byte(`{

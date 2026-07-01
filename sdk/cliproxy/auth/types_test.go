@@ -40,6 +40,52 @@ func TestToolPrefixDisabled(t *testing.T) {
 	}
 }
 
+func TestDisableCoolingOverrideTrueOnly(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		auth    *Auth
+		want    bool
+		wantSet bool
+	}{
+		{name: "nil auth"},
+		{name: "empty auth", auth: &Auth{}},
+		{
+			name:    "snake true",
+			auth:    &Auth{Metadata: map[string]any{"disable_cooling": true}},
+			want:    true,
+			wantSet: true,
+		},
+		{
+			name: "snake false treated unset",
+			auth: &Auth{Metadata: map[string]any{"disable_cooling": false}},
+		},
+		{
+			name:    "kebab true",
+			auth:    &Auth{Metadata: map[string]any{"disable-cooling": "true"}},
+			want:    true,
+			wantSet: true,
+		},
+		{
+			name: "kebab false treated unset",
+			auth: &Auth{Metadata: map[string]any{"disable-cooling": "false"}},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, gotSet := tt.auth.DisableCoolingOverride()
+			if got != tt.want || gotSet != tt.wantSet {
+				t.Fatalf("DisableCoolingOverride() = (%v, %v), want (%v, %v)", got, gotSet, tt.want, tt.wantSet)
+			}
+		})
+	}
+}
+
 func TestEnsureIndexUsesCredentialIdentity(t *testing.T) {
 	t.Parallel()
 

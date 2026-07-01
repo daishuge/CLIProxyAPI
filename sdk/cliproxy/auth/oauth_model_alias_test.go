@@ -35,6 +35,24 @@ func TestResolveOAuthUpstreamModel_SuffixPreservation(t *testing.T) {
 			want:    "claude-sonnet-4-5-20250514(high)",
 		},
 		{
+			name: "hyphen level suffix preserved",
+			aliases: map[string][]internalconfig.OAuthModelAlias{
+				"codex": {{Name: "gpt-5.3-codex-spark", Alias: "spark"}},
+			},
+			channel: "codex",
+			input:   "spark-high",
+			want:    "gpt-5.3-codex-spark(high)",
+		},
+		{
+			name: "explicit hyphen alias wins over suffix parsing",
+			aliases: map[string][]internalconfig.OAuthModelAlias{
+				"codex": {{Name: "explicit-upstream", Alias: "spark-high"}},
+			},
+			channel: "codex",
+			input:   "spark-high",
+			want:    "explicit-upstream",
+		},
+		{
 			name: "no suffix unchanged",
 			aliases: map[string][]internalconfig.OAuthModelAlias{
 				"antigravity": {{Name: "gemini-2.5-pro-exp-03-25", Alias: "gemini-2.5-pro"}},
@@ -51,6 +69,15 @@ func TestResolveOAuthUpstreamModel_SuffixPreservation(t *testing.T) {
 			channel: "claude",
 			input:   "claude-sonnet-4-5(high)",
 			want:    "claude-sonnet-4-5-20250514(low)",
+		},
+		{
+			name: "hyphen config suffix takes priority",
+			aliases: map[string][]internalconfig.OAuthModelAlias{
+				"codex": {{Name: "gpt-5.3-codex-spark-high", Alias: "spark"}},
+			},
+			channel: "codex",
+			input:   "spark-low",
+			want:    "gpt-5.3-codex-spark-high",
 		},
 		{
 			name: "auto suffix preserved",
