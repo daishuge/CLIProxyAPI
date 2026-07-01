@@ -910,7 +910,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	logInfo := helps.UpstreamRequestLog{
+	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -920,14 +920,6 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
-	}
-	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
-		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
-		if errReq != nil {
-			return nil, errReq
-		}
-		applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
-		return httpReq, nil
 	})
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
@@ -1090,7 +1082,7 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	logInfo := helps.UpstreamRequestLog{
+	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -1100,14 +1092,6 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
-	}
-	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
-		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
-		if errReq != nil {
-			return nil, errReq
-		}
-		applyCodexHeaders(httpReq, auth, apiKey, false, e.cfg)
-		return httpReq, nil
 	})
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
@@ -1212,7 +1196,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	logInfo := helps.UpstreamRequestLog{
+	helps.RecordAPIRequest(ctx, e.cfg, helps.UpstreamRequestLog{
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
@@ -1222,16 +1206,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		AuthLabel: authLabel,
 		AuthType:  authType,
 		AuthValue: authValue,
-	}
-	httpResp, err := e.doCodexRequestWithTransportRetry(ctx, auth, logInfo, func() (*http.Request, error) {
-		httpReq, errReq := e.cacheHelper(ctx, from, url, req, body)
-		if errReq != nil {
-			return nil, errReq
-		}
-		applyCodexHeaders(httpReq, auth, apiKey, true, e.cfg)
-		return httpReq, nil
 	})
-
 	httpClient := helps.NewUtlsHTTPClient(ctx, e.cfg, auth, 0)
 	httpClient = reporter.TrackHTTPClient(httpClient)
 	httpResp, err := httpClient.Do(httpReq)
