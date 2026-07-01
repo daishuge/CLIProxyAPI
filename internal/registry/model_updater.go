@@ -121,6 +121,15 @@ func tryRefreshModels(ctx context.Context, label string) {
 		return
 	}
 
+	// Re-apply this fork's local additions before comparing/storing. This is
+	// a SEPARATE load path from loadModelsFromBytes (used only by init() for
+	// the embedded catalog) — the remote refresh has its own inline
+	// unmarshal/validate/store here, so it needs the same hook or a remote
+	// refresh silently drops any local-only addition on every cycle. Applying
+	// before detectChangedProviders also avoids spuriously reporting "claude
+	// changed" on every single refresh just because of this addition.
+	applyLocalCatalogOverrides(parsed)
+
 	// Detect changes before updating store.
 	changed := detectChangedProviders(oldData, parsed)
 
@@ -302,6 +311,12 @@ func loadModelsFromBytes(data []byte, source string) error {
 	if err := validateModelsCatalog(&parsed); err != nil {
 		return fmt.Errorf("%s: validate models catalog: %w", source, err)
 	}
+
+	// Re-apply this fork's local additions on every load (embed or remote),
+	// since a remote refresh replaces the whole catalog wholesale and would
+	// otherwise drop them until upstream adds the same model. See
+	// model_catalog_overrides.go.
+	applyLocalCatalogOverrides(&parsed)
 
 	modelsCatalogStore.mu.Lock()
 	modelsCatalogStore.data = &parsed
