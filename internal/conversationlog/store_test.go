@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	appconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	appconfig "github.com/router-for-me/CLIProxyAPI/v7/internal/config"
 )
 
 func TestStoreDisabledDoesNotCreateFiles(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	codexcompat "github.com/router-for-me/CLIProxyAPI/v6/internal/translator/codex/compat"
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v7/internal/translator/codex/compat"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

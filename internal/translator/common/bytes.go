@@ -2,7 +2,19 @@ package common
 
 import (
 	"strconv"
+
+	"github.com/tidwall/sjson"
 )
+
+// WrapGeminiCLIResponse wraps a raw upstream Gemini response payload inside the
+// Gemini CLI envelope ({"response": ...}) expected by gemini-cli clients.
+func WrapGeminiCLIResponse(response []byte) []byte {
+	out, err := sjson.SetRawBytes([]byte(`{"response":{}}`), "response", response)
+	if err != nil {
+		return response
+	}
+	return out
+}
 
 func GeminiTokenCountJSON(count int64) []byte {
 	out := make([]byte, 0, 96)

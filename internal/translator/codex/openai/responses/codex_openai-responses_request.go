@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	codexcompat "github.com/router-for-me/CLIProxyAPI/v6/internal/translator/codex/compat"
+	codexcompat "github.com/router-for-me/CLIProxyAPI/v7/internal/translator/codex/compat"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"

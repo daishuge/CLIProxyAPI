@@ -7,6 +7,8 @@ package thinking
 import (
 	"strconv"
 	"strings"
+
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 )
 
 // ParseSuffix extracts thinking suffix from a model name.
@@ -183,4 +185,78 @@ func ParseLevelSuffix(rawSuffix string) (level ThinkingLevel, ok bool) {
 	default:
 		return "", false
 	}
+}
+
+// ParseSuffixForModel resolves the thinking suffix for a model, using the model
+// registry to disambiguate hyphenated level aliases (e.g. "gpt-5.5-high") from
+// literal model names. It first honours an explicit parenthesized suffix; when
+// absent it consults the registry (optionally scoped to a provider) to decide
+// whether a trailing hyphen segment is a supported thinking level for the model.
+func ParseSuffixForModel(model string, provider ...string) SuffixResult {
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	if result := ParseSuffix(model); result.HasSuffix {
+		return result
+	}
+	hyphenResult := ParseHyphenLevelSuffix(model)
+	exactInfo := registry.LookupModelInfo(model, firstProvider(provider...))
+	if exactInfo != nil {
+		if exactInfo.ThinkingAliasBase == "" || !hyphenResult.HasSuffix {
+			return SuffixResult{ModelName: model, HasSuffix: false}
+		}
+		aliasBase := strings.TrimSpace(exactInfo.ThinkingAliasBase)
+		if aliasBase == "" || !strings.EqualFold(aliasBase, hyphenResult.ModelName) {
+			return SuffixResult{ModelName: model, HasSuffix: false}
+		}
+		if modelSupportsLevel(exactInfo, hyphenResult.RawSuffix) {
+			return hyphenResult
+		}
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	if !hyphenResult.HasSuffix {
+		return hyphenResult
+	}
+	info := registry.LookupModelInfo(hyphenResult.ModelName, firstProvider(provider...))
+	if !modelSupportsLevel(info, hyphenResult.RawSuffix) {
+		return SuffixResult{ModelName: model, HasSuffix: false}
+	}
+	return hyphenResult
+}
+
+// FormatSuffix appends the parsed suffix using the canonical parenthesized form.
+func FormatSuffix(modelName string, suffix SuffixResult) string {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" || !suffix.HasSuffix || strings.TrimSpace(suffix.RawSuffix) == "" {
+		return modelName
+	}
+	return modelName + "(" + strings.TrimSpace(suffix.RawSuffix) + ")"
+}
+
+// firstProvider returns the first provider hint (lower-cased) from a variadic
+// provider argument, or an empty string when none is supplied.
+func firstProvider(provider ...string) string {
+	if len(provider) == 0 {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(provider[0]))
+}
+
+// modelSupportsLevel reports whether the registry model info advertises the
+// given raw thinking level in its supported thinking levels.
+func modelSupportsLevel(info *registry.ModelInfo, rawLevel string) bool {
+	if info == nil || info.Thinking == nil {
+		return false
+	}
+	rawLevel = strings.ToLower(strings.TrimSpace(rawLevel))
+	if rawLevel == "" {
+		return false
+	}
+	for _, level := range info.Thinking.Levels {
+		if strings.EqualFold(strings.TrimSpace(level), rawLevel) {
+			return true
+		}
+	}
+	return false
 }

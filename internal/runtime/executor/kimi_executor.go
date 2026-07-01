@@ -80,7 +80,7 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	}
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 
-	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
 	token := kimiCreds(auth)
 
@@ -190,7 +190,7 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 	}
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 
-	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
 	token := kimiCreds(auth)
 
 	reporter := helps.NewExecutorUsageReporter(ctx, e, baseModel, auth)

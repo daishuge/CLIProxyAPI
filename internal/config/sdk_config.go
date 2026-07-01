@@ -21,6 +21,10 @@ type SDKConfig struct {
 	//     sent it and do not inject it otherwise; on /v1/images/generations and /v1/images/edits behave like "chat".
 	DisableImageGeneration DisableImageGenerationMode `yaml:"disable-image-generation" json:"disable-image-generation"`
 
+	// EnableGeminiCLIEndpoint controls whether Gemini CLI internal endpoints (/v1internal:*) are enabled.
+	// Default is false for safety; when false, /v1internal:* requests are rejected.
+	EnableGeminiCLIEndpoint bool `yaml:"enable-gemini-cli-endpoint" json:"enable-gemini-cli-endpoint"`
+
 	// GPTImage2BaseModel sets the base (mainline) model used by the legacy hosted
 	// image_generation tool path when a Codex image request is not proxied directly
 	// through the Image API.
