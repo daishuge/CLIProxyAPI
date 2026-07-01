@@ -1097,6 +1097,14 @@ func (r *ModelRegistry) GetModelProviders(modelID string) []string {
 
 	sort.Slice(providers, func(i, j int) bool {
 		if providers[i].count == providers[j].count {
+			// Tie-break by provider precedence first, then name. This lets an
+			// OAuth-capable provider win over an API-key-only provider that shares
+			// the same catalog entry (see providerSelectionRank) so an OAuth
+			// account is routed to the executor that can actually use its token.
+			ri, rj := providerSelectionRank(providers[i].name), providerSelectionRank(providers[j].name)
+			if ri != rj {
+				return ri < rj
+			}
 			return providers[i].name < providers[j].name
 		}
 		return providers[i].count > providers[j].count
@@ -1107,6 +1115,35 @@ func (r *ModelRegistry) GetModelProviders(modelID string) []string {
 		result = append(result, item.name)
 	}
 	return result
+}
+
+// providerSelectionRank returns a preference rank for providers that share
+// catalog model IDs, so equal-count ties resolve to the provider whose executor
+// can serve the requesting account.
+//
+// Google's `gemini-2.5-*` / `gemini-3-*-preview` model IDs are catalogued under
+// BOTH the native `gemini` provider (API-key only; `gemini_executor.go` reads
+// auth.Attributes["api_key"] and does NO OpenAI->Gemini translation) and the
+// `gemini-cli` provider (OAuth Cloud Code; `gemini_cli_executor.go` refreshes the
+// OAuth token and DOES translate). When a deployment has both a native gemini API
+// key and a gemini-cli OAuth account, the counts tie and the old alphabetical
+// tie-break ("gemini" < "gemini-cli") put the API-key-only provider first, so an
+// OAuth request could be handed the native executor -> the OAuth token is sent as
+// an API key -> Google 400. Ranking `gemini-cli` ahead of `gemini` routes the
+// shared models to the OAuth-capable executor first (matching the live server,
+// which serves these via gemini-cli). A native-only deployment is unaffected:
+// `gemini-cli` then has count 0 and is not a candidate, so `gemini` still wins.
+// Lower rank sorts earlier; the default rank keeps every other provider on the
+// existing alphabetical ordering.
+func providerSelectionRank(name string) int {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "gemini-cli":
+		return 0
+	case "gemini":
+		return 1
+	default:
+		return 100
+	}
 }
 
 // GetModelInfo returns ModelInfo, prioritizing provider-specific definition if available.
