@@ -1,46 +1,32 @@
-import { useId, type InputHTMLAttributes, type ReactNode } from 'react';
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  hint?: string;
-  error?: string;
-  rightElement?: ReactNode;
-}
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  invalid?: boolean;
+};
 
-export function Input({ label, hint, error, rightElement, className = '', id, ...rest }: InputProps) {
-  const generatedId = useId();
-  const inputId = id ?? generatedId;
-  const hintId = hint ? `${inputId}-hint` : undefined;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const describedBy = [rest['aria-describedby'], errorId, hintId].filter(Boolean).join(' ') || undefined;
-
-  return (
-    <div className="form-group">
-      {label && <label htmlFor={inputId}>{label}</label>}
-      <div style={{ position: 'relative' }}>
-        <input
-          id={inputId}
-          className={`input ${className}`.trim()}
-          aria-invalid={Boolean(error) || rest['aria-invalid']}
-          aria-describedby={describedBy}
-          {...rest}
-        />
-        {rightElement && (
-          <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-            {rightElement}
-          </div>
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type = "text", invalid = false, ...props }, ref) => {
+    return (
+      <input
+        ref={ref}
+        type={type}
+        aria-invalid={invalid || undefined}
+        className={cn(
+          "flex h-9 w-full rounded-md border bg-surface px-3 py-1 text-sm shadow-sm",
+          "border-input text-foreground placeholder:text-muted-foreground",
+          "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
+          "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
+          "aria-[invalid=true]:border-danger aria-[invalid=true]:focus-visible:ring-danger/40",
+          className,
         )}
-      </div>
-      {hint && (
-        <div id={hintId} className="hint">
-          {hint}
-        </div>
-      )}
-      {error && (
-        <div id={errorId} className="error-box">
-          {error}
-        </div>
-      )}
-    </div>
-  );
-}
+        {...props}
+      />
+    );
+  },
+);
+Input.displayName = "Input";
+
+export { Input };
