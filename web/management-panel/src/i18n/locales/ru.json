@@ -38,7 +38,7 @@
     "alias": "Псевдоним",
     "failure": "Сбой",
     "unknown_error": "Неизвестная ошибка",
-    "quota_update_required": "Пожалуйста, обновите CPA или проверьте наличие обновлений",
+    "quota_update_required": "Пожалуйста, обновите PPAP или проверьте наличие обновлений",
     "quota_check_credential": "Пожалуйста, проверьте статус учётных данных",
     "copy": "Копировать",
     "expand": "Развернуть",
@@ -57,12 +57,12 @@
     "unsaved_changes_message": "У вас есть несохранённые изменения. Если вы уйдёте, они будут потеряны. Выйти?"
   },
   "title": {
-    "login": "Центр управления CLI Proxy API",
-    "abbr": "CPAMC"
+    "login": "Панель управления Playful Proxy API",
+    "abbr": "PPAP"
   },
   "splash": {
-    "title": "CLI Proxy API",
-    "subtitle": "Центр управления"
+    "title": "Playful Proxy API",
+    "subtitle": "Панель управления"
   },
   "login": {
     "subtitle": "Введите данные подключения, чтобы получить доступ к панели управления",
@@ -83,7 +83,7 @@
     "error_timeout": "Время ожидания истекло, сервер не отвечает",
     "error_unauthorized": "Аутентификация не удалась, ключ управления отсутствует или неверен",
     "error_forbidden": "Доступ запрещён: удалённое управление отключено, ключ управления не настроен или IP временно заблокирован",
-    "error_not_found": "Management API не найден, проверьте, что адрес указывает на backend CLIProxyAPI",
+    "error_not_found": "Management API не найден, проверьте, что адрес указывает на backend Playful Proxy API",
     "error_server": "Backend не смог обработать запрос управления, проверьте журналы сервера",
     "error_cors": "Блокировка CORS, проверьте конфигурацию сервера",
     "error_ssl": "Ошибка проверки SSL/TLS сертификата"
@@ -160,7 +160,7 @@
   "auth_files": {
     "title": "Управление файлами авторизации",
     "title_section": "Файлы авторизации",
-    "description": "Управляйте всеми JSON-файлами авторизации CLI Proxy (например, Qwen, Gemini, Vertex). Загрузка учётных данных сразу включает соответствующую интеграцию AI.",
+    "description": "Управляйте всеми JSON-файлами авторизации Playful Proxy (например, Qwen, Gemini, Vertex). Загрузка учётных данных сразу включает соответствующую интеграцию AI.",
     "upload_button": "Загрузить файл",
     "delete_all_button": "Удалить всё",
     "search_empty_title": "Файлы не найдены",
@@ -241,7 +241,7 @@
     "models_empty": "Для этих учётных данных нет доступных моделей",
     "models_empty_desc": "Возможно, учётные данные ещё не загружены сервером или к ним не привязаны модели.",
     "models_unsupported": "Функция не поддерживается в текущей версии",
-    "models_unsupported_desc": "Обновите CLI Proxy API до последней версии и повторите попытку",
+    "models_unsupported_desc": "Обновите Playful Proxy API до последней версии и повторите попытку",
     "models_excluded_badge": "Отключена",
     "models_excluded_hint": "Эта OAuth-модель отключена",
     "status_toggle_label": "Включено",
@@ -458,7 +458,7 @@
     "provider_hint": "По умолчанию используется текущий фильтр; выберите существующего провайдера или введите новое имя.",
     "models_label": "Отключаемые модели",
     "models_loading": "Загрузка моделей...",
-    "models_unsupported": "Текущая версия CPA не поддерживает загрузку списка моделей.",
+    "models_unsupported": "Текущая версия PPAP не поддерживает загрузку списка моделей.",
     "models_loaded": "Загружено моделей: {{count}}. Отметьте модели, которые нужно отключить.",
     "no_models_available": "Для этого провайдера нет доступных моделей.",
     "custom_rule_label": "Пользовательское правило модели",
@@ -478,9 +478,9 @@
     "model_count": "Отключено моделей: {{count}}",
     "list_empty_all": "Отключений моделей пока нет — используйте \"Добавить отключение\".",
     "provider_required": "Сначала укажите провайдера",
-    "upgrade_required": "Текущая версия CPA не поддерживает отключение OAuth-моделей. Пожалуйста, обновите систему.",
-    "upgrade_required_title": "Пожалуйста, обновите CLI Proxy API",
-    "upgrade_required_desc": "Текущая версия сервера не поддерживает получение отключения OAuth-моделей. Обновите CPA (CLI Proxy API) до последней версии и повторите попытку."
+    "upgrade_required": "Текущая версия PPAP не поддерживает отключение OAuth-моделей. Пожалуйста, обновите систему.",
+    "upgrade_required_title": "Пожалуйста, обновите Playful Proxy API",
+    "upgrade_required_desc": "Текущая версия сервера не поддерживает получение отключения OAuth-моделей. Обновите PPAP до последней версии и повторите попытку."
   },
   "oauth_model_alias": {
     "title": "Псевдонимы моделей OAuth",
@@ -490,7 +490,7 @@
     "provider_placeholder": "например: codex / vertex",
     "provider_hint": "По умолчанию используется текущий фильтр; выберите существующего провайдера или введите новое имя.",
     "model_source_loading": "Загрузка моделей...",
-    "model_source_unsupported": "Текущая версия CPA не поддерживает загрузку списка моделей (ручной ввод остаётся доступным).",
+    "model_source_unsupported": "Текущая версия PPAP не поддерживает загрузку списка моделей (ручной ввод остаётся доступным).",
     "model_source_loaded": "Загружено моделей: {{count}}. Используйте выпадающий список \"Исходная модель\" или введите своё значение. Сохранение пустого списка удаляет провайдера. Включите \"Сохранить оригинал\", чтобы оставить исходное имя вместе с псевдонимом.",
     "alias_label": "Псевдонимы моделей",
     "alias_name_placeholder": "Исходное имя модели",
@@ -540,9 +540,9 @@
     "view_mode_diagram": "Диаграмма",
     "view_mode_list": "Список",
     "provider_required": "Сначала укажите провайдера",
-    "upgrade_required": "Эта функция требует более новой версии CLI Proxy API (CPA). Обновите систему.",
-    "upgrade_required_title": "Пожалуйста, обновите CLI Proxy API",
-    "upgrade_required_desc": "Текущая версия сервера не поддерживает API псевдонимов моделей OAuth. Обновите CLI Proxy API (CPA) до последней версии."
+    "upgrade_required": "Эта функция требует более новой версии Playful Proxy API. Обновите систему.",
+    "upgrade_required_title": "Пожалуйста, обновите Playful Proxy API",
+    "upgrade_required_desc": "Текущая версия сервера не поддерживает API псевдонимов моделей OAuth. Обновите Playful Proxy API до последней версии."
   },
   "auth_login": {
     "codex_oauth_title": "Codex OAuth",
@@ -622,7 +622,7 @@
     "oauth_callback_required": "Сначала вставьте полный URL перенаправления.",
     "oauth_callback_success": "Callback URL отправлен. Продолжайте ожидать аутентификацию.",
     "oauth_callback_error": "Не удалось отправить Callback URL:",
-    "oauth_callback_upgrade_hint": "Обновите CLI Proxy API или проверьте подключение.",
+    "oauth_callback_upgrade_hint": "Обновите Playful Proxy API или проверьте подключение.",
     "oauth_callback_status_success": "Callback URL отправлен, ожидаем аутентификацию...",
     "oauth_callback_status_error": "Не удалось отправить Callback URL:",
     "missing_state": "Не удалось получить параметр состояния аутентификации",
@@ -1111,7 +1111,7 @@
     "description_show_more": "Показать больше",
     "description_show_less": "Свернуть",
     "source_name": "Источник: {{source}}",
-    "cli_proxy_api_source": "Источник CLIProxyAPI",
+    "cli_proxy_api_source": "Источник Playful Proxy API",
     "refresh": "Обновить",
     "retry": "Повторить",
     "load_failed": "Не удалось загрузить магазин плагинов",
@@ -1204,7 +1204,7 @@
   },
   "system_info": {
     "title": "Информация о центре управления",
-    "about_title": "CLI Proxy API Management Center",
+    "about_title": "Playful Proxy API Panel",
     "models_title": "Доступные модели",
     "models_desc": "Показывает ответ /models и автоматически использует сохранённые API-ключи для авторизации.",
     "models_loading": "Загрузка доступных моделей...",
@@ -1220,7 +1220,7 @@
     "quick_links_title": "Быстрые ссылки",
     "quick_links_desc": "Доступ к репозиториям проекта и документации для помощи и обновлений.",
     "link_main_repo": "Основной репозиторий",
-    "link_main_repo_desc": "Исходный код основной программы CLI Proxy API",
+    "link_main_repo_desc": "Исходный код основной программы Playful Proxy API",
     "link_webui_repo": "Репозиторий WebUI",
     "link_webui_repo_desc": "Исходный код фронтенда центра управления",
     "link_docs": "Документация",
@@ -1265,7 +1265,7 @@
     "toggle_collapse": "Свернуть боковую панель"
   },
   "footer": {
-    "api_version": "Версия CLI Proxy API",
+    "api_version": "Версия Playful Proxy API",
     "build_date": "Время сборки",
     "version": "Версия интерфейса управления"
   },

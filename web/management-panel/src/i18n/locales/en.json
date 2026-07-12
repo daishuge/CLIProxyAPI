@@ -38,7 +38,7 @@
     "alias": "Alias",
     "failure": "Failure",
     "unknown_error": "Unknown error",
-    "quota_update_required": "Please update the CPA version or check for updates",
+    "quota_update_required": "Please update the PPAP version or check for updates",
     "quota_check_credential": "Please check the credential status",
     "copy": "Copy",
     "expand": "Expand",
@@ -57,12 +57,12 @@
     "unsaved_changes_message": "You have unsaved changes. Leaving now will discard them. Do you want to leave?"
   },
   "title": {
-    "login": "CLI Proxy API Management Center",
-    "abbr": "CPAMC"
+    "login": "Playful Proxy API Panel",
+    "abbr": "PPAP"
   },
   "splash": {
-    "title": "CLI Proxy API",
-    "subtitle": "Management Center"
+    "title": "Playful Proxy API",
+    "subtitle": "Panel"
   },
   "login": {
     "subtitle": "Please enter connection information to access the management interface",
@@ -83,7 +83,7 @@
     "error_timeout": "Connection timed out, server not responding",
     "error_unauthorized": "Authentication failed, management key is missing or invalid",
     "error_forbidden": "Access denied, remote management is disabled, the management key is not configured, or this IP is temporarily banned",
-    "error_not_found": "Management API not found, confirm the server address points to the CLIProxyAPI backend",
+    "error_not_found": "Management API not found, confirm the server address points to the Playful Proxy API backend",
     "error_server": "Backend failed while handling the management request, check the server logs",
     "error_cors": "Cross-origin request blocked, please check server configuration",
     "error_ssl": "SSL/TLS certificate verification failed"
@@ -105,7 +105,7 @@
     "plugin_store": "Plugin Store",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
-    "system_info": "Management Center Info"
+    "system_info": "Panel Info"
   },
   "nav_groups": {
     "operate": "Operate",
@@ -161,7 +161,7 @@
   "auth_files": {
     "title": "Auth Files Management",
     "title_section": "Auth Files",
-    "description": "Manage all CLI Proxy JSON auth files here (e.g. Qwen, Gemini, Vertex). Uploading a credential immediately enables the corresponding AI integration.",
+    "description": "Manage all Playful Proxy JSON auth files here (e.g. Qwen, Gemini, Vertex). Uploading a credential immediately enables the corresponding AI integration.",
     "upload_button": "Upload File",
     "delete_all_button": "Delete All",
     "search_empty_title": "No matching files",
@@ -242,7 +242,7 @@
     "models_empty": "No available models for this credential",
     "models_empty_desc": "This credential may not be loaded by the server yet, or no models are bound to it.",
     "models_unsupported": "This feature is not supported in the current version",
-    "models_unsupported_desc": "Please update CLI Proxy API to the latest version and try again",
+    "models_unsupported_desc": "Please update Playful Proxy API to the latest version and try again",
     "models_excluded_badge": "Disabled",
     "models_excluded_hint": "This OAuth model is disabled",
     "status_toggle_label": "Enabled",
@@ -471,7 +471,7 @@
     "provider_hint": "Defaults to the current filter; pick an existing provider or type a new name.",
     "models_label": "Models to disable",
     "models_loading": "Loading models...",
-    "models_unsupported": "Current CPA version does not support fetching model lists.",
+    "models_unsupported": "Current PPAP version does not support fetching model lists.",
     "models_loaded": "{{count}} models loaded. Check the models to disable.",
     "no_models_available": "No models available for this provider.",
     "custom_rule_label": "Custom model rule",
@@ -491,9 +491,9 @@
     "model_count": "{{count}} models disabled",
     "list_empty_all": "No provider model disablement yet; click “Add Disablement” to create one.",
     "provider_required": "Please enter a provider first",
-    "upgrade_required": "Current CPA version does not support OAuth model disablement. Please upgrade.",
-    "upgrade_required_title": "Please upgrade CLI Proxy API",
-    "upgrade_required_desc": "The current server version does not support fetching OAuth model disablement. Please upgrade to the latest CPA (CLI Proxy API) version and try again."
+    "upgrade_required": "Current PPAP version does not support OAuth model disablement. Please upgrade.",
+    "upgrade_required_title": "Please upgrade Playful Proxy API",
+    "upgrade_required_desc": "The current server version does not support fetching OAuth model disablement. Please upgrade to the latest PPAP version and try again."
   },
   "oauth_model_alias": {
     "title": "OAuth Model Aliases",
@@ -503,7 +503,7 @@
     "provider_placeholder": "e.g. codex / vertex",
     "provider_hint": "Defaults to the current filter; pick an existing provider or type a new name.",
     "model_source_loading": "Loading models...",
-    "model_source_unsupported": "The current CPA version does not support fetching model lists (manual input still works).",
+    "model_source_unsupported": "The current PPAP version does not support fetching model lists (manual input still works).",
     "model_source_loaded": "{{count}} models loaded. Use the dropdown in 'Source model name', or type custom values. Saving an empty list removes that provider. Enable 'Keep original' to keep the original name while adding the alias.",
     "alias_label": "Model aliases",
     "alias_name_placeholder": "Source model name",
@@ -553,9 +553,9 @@
     "view_mode_diagram": "Diagram",
     "view_mode_list": "List",
     "provider_required": "Please enter a provider first",
-    "upgrade_required": "This feature requires a newer CLI Proxy API (CPA) version. Please upgrade.",
-    "upgrade_required_title": "Please upgrade CLI Proxy API",
-    "upgrade_required_desc": "The current server does not support the OAuth model aliases API. Please upgrade to the latest CLI Proxy API (CPA) version."
+    "upgrade_required": "This feature requires a newer Playful Proxy API version. Please upgrade.",
+    "upgrade_required_title": "Please upgrade Playful Proxy API",
+    "upgrade_required_desc": "The current server does not support the OAuth model aliases API. Please upgrade to the latest Playful Proxy API version."
   },
   "auth_login": {
     "codex_oauth_title": "Codex OAuth",
@@ -635,7 +635,7 @@
     "oauth_callback_required": "Please paste the full redirect URL first.",
     "oauth_callback_success": "Callback URL submitted. Continue waiting for authentication.",
     "oauth_callback_error": "Failed to submit callback URL:",
-    "oauth_callback_upgrade_hint": "Please update CLI Proxy API or check the connection.",
+    "oauth_callback_upgrade_hint": "Please update Playful Proxy API or check the connection.",
     "oauth_callback_status_success": "Callback URL submitted, waiting for authentication...",
     "oauth_callback_status_error": "Callback URL submission failed:",
     "missing_state": "Unable to retrieve authentication state parameter",
@@ -675,7 +675,7 @@
     "download_button": "Download Logs",
     "error_logs_modal_title": "Error Request Logs",
     "error_logs_description": "Pick an error request log file to open or download (only generated when request logging is off).",
-    "error_logs_home_unavailable": "In Home mode, use Log Content for database logs. Error request log files only apply to CPA file logs.",
+    "error_logs_home_unavailable": "In Home mode, use Log Content for database logs. Error request log files only apply to PPAP file logs.",
     "error_logs_request_log_enabled": "Request logging is enabled, so this list will always be empty. Disable request logging and refresh to view error logs.",
     "error_logs_empty": "No error request log files found",
     "error_logs_load_error": "Failed to load error log list",
@@ -1124,7 +1124,7 @@
     "description_show_more": "Show more",
     "description_show_less": "Show less",
     "source_name": "Source: {{source}}",
-    "cli_proxy_api_source": "CLIProxyAPI source",
+    "cli_proxy_api_source": "Playful Proxy API source",
     "refresh": "Refresh",
     "retry": "Retry",
     "load_failed": "Failed to load the plugin store",
@@ -1225,8 +1225,8 @@
     "empty_src_desc": "This plugin menu does not provide an embeddable page URL."
   },
   "system_info": {
-    "title": "Management Center Info",
-    "about_title": "CLI Proxy API Management Center",
+    "title": "Panel Info",
+    "about_title": "Playful Proxy API Panel",
     "models_title": "Available Models",
     "models_desc": "Shows the /models response and uses saved API keys for auth automatically.",
     "models_loading": "Loading available models...",
@@ -1242,9 +1242,9 @@
     "quick_links_title": "Quick Links",
     "quick_links_desc": "Access project repositories and documentation for help and updates.",
     "link_main_repo": "Main Repository",
-    "link_main_repo_desc": "CLI Proxy API core program source code",
+    "link_main_repo_desc": "Playful Proxy API core program source code",
     "link_webui_repo": "WebUI Repository",
-    "link_webui_repo_desc": "Management Center frontend source code",
+    "link_webui_repo_desc": "Panel frontend source code",
     "link_docs": "Documentation",
     "link_docs_desc": "Configuration tutorials and guides",
     "clear_login_title": "Local Login Data",
@@ -1287,7 +1287,7 @@
     "toggle_collapse": "Collapse sidebar"
   },
   "footer": {
-    "api_version": "CLI Proxy API Version",
+    "api_version": "Playful Proxy API Version",
     "build_date": "Build Time",
     "version": "Management UI Version"
   },

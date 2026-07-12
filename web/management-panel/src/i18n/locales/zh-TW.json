@@ -38,7 +38,7 @@
     "alias": "別名",
     "failure": "失敗",
     "unknown_error": "未知錯誤",
-    "quota_update_required": "請更新 CPA 版本或檢查更新",
+    "quota_update_required": "請更新 PPAP 版本或檢查更新",
     "quota_check_credential": "請檢查憑證狀態",
     "copy": "複製",
     "expand": "展開",
@@ -57,12 +57,12 @@
     "unsaved_changes_message": "你有未儲存的變更，離開後將遺失這些變更。確定要離開嗎？"
   },
   "title": {
-    "login": "CLI Proxy API Management Center",
-    "abbr": "CPAMC"
+    "login": "Playful Proxy API Panel",
+    "abbr": "PPAP"
   },
   "splash": {
-    "title": "CLI Proxy API",
-    "subtitle": "管理中心"
+    "title": "Playful Proxy API",
+    "subtitle": "管理面板"
   },
   "login": {
     "subtitle": "請輸入連線資訊以存取管理介面",
@@ -83,7 +83,7 @@
     "error_timeout": "連線逾時，伺服器無回應",
     "error_unauthorized": "驗證失敗，管理金鑰缺失或無效",
     "error_forbidden": "存取被拒絕，遠端管理未啟用、管理金鑰未設定或 IP 被暫時封鎖",
-    "error_not_found": "找不到 Management API，請確認服務位址指向 CLIProxyAPI 後端",
+    "error_not_found": "找不到 Management API，請確認服務位址指向 Playful Proxy API 後端",
     "error_server": "後端處理管理介面時發生錯誤，請查看服務日誌",
     "error_cors": "跨域請求被阻擋，請檢查伺服器設定",
     "error_ssl": "SSL/TLS 憑證驗證失敗"
@@ -161,7 +161,7 @@
   "auth_files": {
     "title": "驗證檔案管理",
     "title_section": "驗證檔案",
-    "description": "這裡集中管理 CLI Proxy 支援的所有 JSON 驗證檔案（如 Qwen、Gemini、Vertex 等），上傳後即可在執行時啟用對應的 AI 服務。",
+    "description": "這裡集中管理 Playful Proxy 支援的所有 JSON 驗證檔案（如 Qwen、Gemini、Vertex 等），上傳後即可在執行時啟用對應的 AI 服務。",
     "upload_button": "上傳檔案",
     "delete_all_button": "刪除全部",
     "search_empty_title": "沒有符合的設定檔",
@@ -242,7 +242,7 @@
     "models_empty": "該憑證暫無可用模型",
     "models_empty_desc": "該驗證憑證可能尚未被伺服器載入或沒有綁定任何模型",
     "models_unsupported": "目前版本不支援此功能",
-    "models_unsupported_desc": "請更新 CLI Proxy API 到最新版本後重試",
+    "models_unsupported_desc": "請更新 Playful Proxy API 到最新版本後重試",
     "models_excluded_badge": "已停用",
     "models_excluded_hint": "此 OAuth 模型已被停用",
     "status_toggle_label": "啟用",
@@ -471,7 +471,7 @@
     "provider_hint": "預設選取目前篩選的供應商，也可直接輸入或選擇其他名稱。",
     "models_label": "停用的模型",
     "models_loading": "正在載入模型清單...",
-    "models_unsupported": "目前 CPA 版本不支援取得模型清單。",
+    "models_unsupported": "目前 PPAP 版本不支援取得模型清單。",
     "models_loaded": "已載入 {{count}} 個模型，勾選要停用的模型。",
     "no_models_available": "該供應商暫無可用模型清單。",
     "custom_rule_label": "自訂模型規則",
@@ -491,9 +491,9 @@
     "model_count": "停用 {{count}} 個模型",
     "list_empty_all": "暫無任何供應商的模型停用，點擊「新增停用」建立。",
     "provider_required": "請先填寫供應商名稱",
-    "upgrade_required": "目前 CPA 版本不支援 OAuth 模型停用，請升級 CPA 版本",
-    "upgrade_required_title": "需要升級 CPA 版本",
-    "upgrade_required_desc": "目前伺服器版本不支援取得 OAuth 模型停用功能，請升級到最新版本的 CPA（CLI Proxy API）後重試。"
+    "upgrade_required": "目前 PPAP 版本不支援 OAuth 模型停用，請升級 PPAP 版本",
+    "upgrade_required_title": "需要升級 PPAP 版本",
+    "upgrade_required_desc": "目前伺服器版本不支援取得 OAuth 模型停用功能，請升級到最新版本的 CPA（Playful Proxy API）後重試。"
   },
   "oauth_model_alias": {
     "title": "OAuth 模型別名",
@@ -503,7 +503,7 @@
     "provider_placeholder": "例如 codex / vertex",
     "provider_hint": "預設選取目前篩選的供應商，也可直接輸入或選擇其他名稱。",
     "model_source_loading": "正在載入模型清單...",
-    "model_source_unsupported": "目前 CPA 版本不支援取得模型清單（仍可手動輸入）。",
+    "model_source_unsupported": "目前 PPAP 版本不支援取得模型清單（仍可手動輸入）。",
     "model_source_loaded": "已載入 {{count}} 個模型，可在「原模型名稱」中下拉選擇；也可手動輸入。留空儲存將刪除該供應商記錄；開啟「保留原名」會在保留原模型名的同時新增別名。",
     "alias_label": "模型別名",
     "alias_name_placeholder": "原模型名稱",
@@ -553,9 +553,9 @@
     "view_mode_diagram": "概覽",
     "view_mode_list": "管理",
     "provider_required": "請先填寫供應商名稱",
-    "upgrade_required": "目前 CPA 版本不支援模型別名功能，請升級 CPA 版本",
-    "upgrade_required_title": "需要升級 CPA 版本",
-    "upgrade_required_desc": "目前伺服器版本不支援 OAuth 模型別名功能，請升級到最新版本的 CPA（CLI Proxy API）後重試。"
+    "upgrade_required": "目前 PPAP 版本不支援模型別名功能，請升級 PPAP 版本",
+    "upgrade_required_title": "需要升級 PPAP 版本",
+    "upgrade_required_desc": "目前伺服器版本不支援 OAuth 模型別名功能，請升級到最新版本的 CPA（Playful Proxy API）後重試。"
   },
   "auth_login": {
     "codex_oauth_title": "Codex OAuth",
@@ -646,7 +646,7 @@
     "oauth_callback_required": "請先貼上完整的回調 URL。",
     "oauth_callback_success": "回調 URL 已提交，請繼續等待驗證。",
     "oauth_callback_error": "提交回調 URL 失敗:",
-    "oauth_callback_upgrade_hint": "請更新 CLI Proxy API 或檢查連線",
+    "oauth_callback_upgrade_hint": "請更新 Playful Proxy API 或檢查連線",
     "oauth_callback_status_success": "回調 URL 已提交，等待驗證中...",
     "oauth_callback_status_error": "回調 URL 提交失敗:",
     "missing_state": "無法取得驗證狀態參數",
@@ -701,7 +701,7 @@
     "download_button": "下載記錄",
     "error_logs_modal_title": "錯誤請求記錄",
     "error_logs_description": "請選擇要開啟或下載的錯誤請求記錄檔案（僅在關閉請求記錄時產生）。",
-    "error_logs_home_unavailable": "Home 模式下請在記錄內容頁查看資料庫記錄，錯誤請求記錄清單僅適用於 CPA 檔案記錄。",
+    "error_logs_home_unavailable": "Home 模式下請在記錄內容頁查看資料庫記錄，錯誤請求記錄清單僅適用於 PPAP 檔案記錄。",
     "error_logs_request_log_enabled": "目前已開啟請求記錄，按介面約定錯誤請求記錄清單會始終為空。關閉請求記錄後再重新整理即可查看。",
     "error_logs_empty": "暫無錯誤請求記錄檔案",
     "error_logs_load_error": "載入錯誤記錄清單失敗",
@@ -1150,7 +1150,7 @@
     "description_show_more": "展開描述",
     "description_show_less": "收起描述",
     "source_name": "來源：{{source}}",
-    "cli_proxy_api_source": "CLIProxyAPI來源",
+    "cli_proxy_api_source": "Playful Proxy API來源",
     "refresh": "重新整理",
     "retry": "重試",
     "load_failed": "插件商店載入失敗",
@@ -1251,8 +1251,8 @@
     "empty_src_desc": "此插件選單未提供可嵌入的頁面位址。"
   },
   "system_info": {
-    "title": "管理中心資訊",
-    "about_title": "CLI Proxy API Management Center",
+    "title": "管理面板資訊",
+    "about_title": "Playful Proxy API Panel",
     "models_title": "可用模型清單",
     "models_desc": "展示 /models 回傳的模型，並自動使用伺服器儲存的 API Key 進行驗證。",
     "models_loading": "正在載入可用模型...",
@@ -1268,9 +1268,9 @@
     "quick_links_title": "快速連結",
     "quick_links_desc": "存取專案儲存庫和文件，取得協助和更新。",
     "link_main_repo": "主程式儲存庫",
-    "link_main_repo_desc": "CLI Proxy API 核心程式原始碼",
+    "link_main_repo_desc": "Playful Proxy API 核心程式原始碼",
     "link_webui_repo": "WebUI 儲存庫",
-    "link_webui_repo_desc": "管理中心前端介面原始碼",
+    "link_webui_repo_desc": "管理面板前端介面原始碼",
     "link_docs": "使用教學",
     "link_docs_desc": "設定指南和使用說明",
     "clear_login_title": "本地登入資訊",
@@ -1313,9 +1313,9 @@
     "toggle_collapse": "收起側邊欄"
   },
   "footer": {
-    "api_version": "CLI Proxy API 版本",
+    "api_version": "Playful Proxy API 版本",
     "build_date": "建置時間",
-    "version": "管理中心版本"
+    "version": "管理面板版本"
   },
   "providersPage": {
     "header": {
