@@ -110,6 +110,7 @@ function buildInitialForm(
             testModel: m.testModel,
             image: m.image === true,
             thinkingJson: formatJsonObject(m.thinking),
+            forceMapping: m.forceMapping === true,
           }))
         : [emptyModel()],
       headers: cfg.headers
@@ -150,6 +151,7 @@ function buildInitialForm(
           alias: m.alias ?? '',
           priority: m.priority,
           testModel: m.testModel,
+          forceMapping: m.forceMapping === true,
         }))
       : [emptyModel()],
     headers: cfg.headers

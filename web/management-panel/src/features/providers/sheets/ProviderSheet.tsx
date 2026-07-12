@@ -142,16 +142,30 @@ export function ProviderSheet({
     }
     const formKey = `${state.brand}:${state.resource?.id ?? 'new'}:${state.mode}`;
     return (
-      <BaseProviderForm
-        key={formKey}
-        brand={state.brand}
-        resource={state.resource}
-        mode={state.mode}
-        mutating={formMutating}
-        formId={formId}
-        onSubmit={state.mode === 'create' ? handleCreate : handleUpdate}
-        onDirtyChange={handleDirtyChange}
-      />
+      <>
+        {state.brand === 'codex' ? (
+          <div className={styles.codexPpapHintCard} role="note">
+            <div className={styles.codexPpapHintTitle}>
+              {t('providersPage.form.codexPpapHint.title')}
+            </div>
+            <ul className={styles.codexPpapHintList}>
+              <li>{t('providersPage.form.codexPpapHint.fastAlias')}</li>
+              <li>{t('providersPage.form.codexPpapHint.thinkingSuffix')}</li>
+              <li>{t('providersPage.form.codexPpapHint.serviceTier')}</li>
+            </ul>
+          </div>
+        ) : null}
+        <BaseProviderForm
+          key={formKey}
+          brand={state.brand}
+          resource={state.resource}
+          mode={state.mode}
+          mutating={formMutating}
+          formId={formId}
+          onSubmit={state.mode === 'create' ? handleCreate : handleUpdate}
+          onDirtyChange={handleDirtyChange}
+        />
+      </>
     );
   };
 

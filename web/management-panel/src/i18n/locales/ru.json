@@ -1421,6 +1421,15 @@
         "nameRequired": "Название обязательно",
         "apiKeyRequired": "Нужен хотя бы один API-ключ",
         "baseUrlRequired": "Base URL обязателен"
+      },
+      "modelBadgeForceMapping": "Force mapping",
+      "modelForceMapping": "Возвращать модель клиенту как алиас",
+      "modelForceMappingHint": "Форк PPAP: при включении шлюз переписывает поле `model` в апстрим-ответе на алиас, клиент не видит настоящее имя модели.",
+      "codexPpapHint": {
+        "title": "Codex-конвенции PPAP",
+        "fastAlias": "Добавьте `-fast` в имя модели у клиента (например `gpt-5.5-high-fast`), чтобы попросить priority service tier.",
+        "thinkingSuffix": "Уровень thinking задаётся суффиксом в скобках (`gpt-5.5(high)`) или через дефис (`gpt-5.5-high`) — форк понимает оба варианта.",
+        "serviceTier": "Глобальный service_tier настраивается в payload-правилах (Config → Payload), а не на этой записи."
       }
     },
     "delete": {

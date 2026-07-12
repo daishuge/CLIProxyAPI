@@ -1443,6 +1443,15 @@
         "nameRequired": "Name is required",
         "apiKeyRequired": "At least one API key is required",
         "baseUrlRequired": "Base URL is required"
+      },
+      "modelBadgeForceMapping": "Force mapping",
+      "modelForceMapping": "Rewrite response model back to alias",
+      "modelForceMappingHint": "PPAP fork: when set, the gateway rewrites the upstream response `model` field back to the alias so clients never see the underlying name.",
+      "codexPpapHint": {
+        "title": "PPAP Codex conventions",
+        "fastAlias": "Add a `-fast` suffix to a client model (e.g. `gpt-5.5-high-fast`) to request the priority service tier.",
+        "thinkingSuffix": "Set thinking via a parenthesis suffix (`gpt-5.5(high)`) or a hyphen level (`gpt-5.5-high`); the fork resolves both.",
+        "serviceTier": "Global service_tier defaults live in payload rules (config → Payload section), not on this key."
       }
     },
     "delete": {

@@ -1469,6 +1469,15 @@
         "nameRequired": "名稱必填",
         "apiKeyRequired": "至少填寫一個 API 金鑰",
         "baseUrlRequired": "服務位址必填"
+      },
+      "modelBadgeForceMapping": "強制映射",
+      "modelForceMapping": "將上游回應中的模型名改回別名",
+      "modelForceMappingHint": "PPAP 分支專有：啟用後閘道會把上游回傳的 `model` 欄位改寫為別名，客戶端不會看到真實模型名稱。",
+      "codexPpapHint": {
+        "title": "PPAP Codex 命名慣例",
+        "fastAlias": "客戶端模型名加 `-fast` 尾綴（例如 `gpt-5.5-high-fast`）會觸發上游 priority 服務層。",
+        "thinkingSuffix": "思考深度支援括號尾綴（`gpt-5.5(high)`）或短橫線等級（`gpt-5.5-high`），分支兩種都能解析。",
+        "serviceTier": "全域 service_tier 預設值在 payload 規則中設定（設定面板 → Payload 段），不寫在這條 Key 上。"
       }
     },
     "delete": {

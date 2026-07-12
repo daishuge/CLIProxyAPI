@@ -1443,6 +1443,15 @@
         "nameRequired": "名称必填",
         "apiKeyRequired": "至少填写一个 API 密钥",
         "baseUrlRequired": "服务地址必填"
+      },
+      "modelBadgeForceMapping": "强制映射",
+      "modelForceMapping": "将上游响应中的模型名改回别名",
+      "modelForceMappingHint": "PPAP 分支专有：开启后网关会把上游返回的 `model` 字段改写为别名，客户端看不到真实模型名。",
+      "codexPpapHint": {
+        "title": "PPAP Codex 命名约定",
+        "fastAlias": "客户端模型名加 `-fast` 后缀（例如 `gpt-5.5-high-fast`）会触发上游 priority 服务层。",
+        "thinkingSuffix": "思考深度支持括号后缀（`gpt-5.5(high)`）或短横线等级（`gpt-5.5-high`），分支两种都能解析。",
+        "serviceTier": "全局 service_tier 默认值在 payload 规则中配置（配置面板 → Payload 段），不写在这条 Key 上。"
       }
     },
     "delete": {

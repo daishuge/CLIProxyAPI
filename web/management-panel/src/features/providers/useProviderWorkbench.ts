@@ -104,6 +104,11 @@ const buildModelAliases = (
         entry.image = m.image === true;
         entry.thinking = parseThinkingJson(m.thinkingJson);
       }
+      // PPAP fork-only: pass through the force-mapping bit so upstream
+      // response `model` gets rewritten back to the client alias.
+      if (m.forceMapping === true) {
+        entry.forceMapping = true;
+      }
       return entry;
     })
     .filter((m) => m.name);

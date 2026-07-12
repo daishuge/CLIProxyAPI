@@ -51,8 +51,9 @@ export function ModelEntriesEditor({
   return (
     <>
       {visible.map((entry, idx) => {
-        const expanded = extendedOptions && expandedIdx === idx;
+        const expanded = expandedIdx === idx;
         const hasThinking = (entry.thinkingJson ?? '').trim().length > 0;
+        const hasForceMapping = entry.forceMapping === true;
         return (
           <div key={idx} className={styles.modelEntry}>
             <div className={styles.modelAliasRow}>
@@ -81,26 +82,29 @@ export function ModelEntriesEditor({
                     {t('providersPage.form.modelBadgeThinking')}
                   </span>
                 ) : null}
-                {extendedOptions ? (
-                  <button
-                    type="button"
-                    className={styles.entryCardIconBtn}
-                    onClick={() => setExpandedIdx(expanded ? null : idx)}
-                    title={expanded ? t('common.collapse') : t('common.expand')}
-                    aria-label={expanded ? t('common.collapse') : t('common.expand')}
-                    aria-expanded={expanded}
-                  >
-                    <IconChevronDown
-                      className={[
-                        styles.entryCardChevron,
-                        expanded ? styles.entryCardChevronOpen : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      size={14}
-                    />
-                  </button>
+                {!expanded && hasForceMapping ? (
+                  <span className={styles.entryBadge}>
+                    {t('providersPage.form.modelBadgeForceMapping')}
+                  </span>
                 ) : null}
+                <button
+                  type="button"
+                  className={styles.entryCardIconBtn}
+                  onClick={() => setExpandedIdx(expanded ? null : idx)}
+                  title={expanded ? t('common.collapse') : t('common.expand')}
+                  aria-label={expanded ? t('common.collapse') : t('common.expand')}
+                  aria-expanded={expanded}
+                >
+                  <IconChevronDown
+                    className={[
+                      styles.entryCardChevron,
+                      expanded ? styles.entryCardChevronOpen : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    size={14}
+                  />
+                </button>
                 <button
                   type="button"
                   className={styles.removeBtn}
@@ -113,36 +117,53 @@ export function ModelEntriesEditor({
             </div>
             {expanded ? (
               <div className={styles.modelEntryDetails}>
+                {extendedOptions ? (
+                  <>
+                    <label className={styles.checkboxRow}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkboxBox}
+                        checked={entry.image === true}
+                        disabled={mutating}
+                        onChange={(e) => onUpdate(idx, { image: e.target.checked })}
+                      />
+                      <span className={styles.checkboxText}>
+                        <span>{t('providersPage.form.modelImage')}</span>
+                        <small>{t('providersPage.form.modelImageHint')}</small>
+                      </span>
+                    </label>
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        {t('providersPage.form.thinkingConfig')}
+                        <span className={styles.labelHint}>
+                          {' '}
+                          · {t('providersPage.form.thinkingConfigHint')}
+                        </span>
+                      </label>
+                      <textarea
+                        className={styles.textarea}
+                        rows={4}
+                        value={entry.thinkingJson ?? ''}
+                        onChange={(e) => onUpdate(idx, { thinkingJson: e.target.value })}
+                        disabled={mutating}
+                        placeholder={'{"levels":["low","medium","high"]}'}
+                      />
+                    </div>
+                  </>
+                ) : null}
                 <label className={styles.checkboxRow}>
                   <input
                     type="checkbox"
                     className={styles.checkboxBox}
-                    checked={entry.image === true}
+                    checked={entry.forceMapping === true}
                     disabled={mutating}
-                    onChange={(e) => onUpdate(idx, { image: e.target.checked })}
+                    onChange={(e) => onUpdate(idx, { forceMapping: e.target.checked })}
                   />
                   <span className={styles.checkboxText}>
-                    <span>{t('providersPage.form.modelImage')}</span>
-                    <small>{t('providersPage.form.modelImageHint')}</small>
+                    <span>{t('providersPage.form.modelForceMapping')}</span>
+                    <small>{t('providersPage.form.modelForceMappingHint')}</small>
                   </span>
                 </label>
-                <div className={styles.field}>
-                  <label className={styles.label}>
-                    {t('providersPage.form.thinkingConfig')}
-                    <span className={styles.labelHint}>
-                      {' '}
-                      · {t('providersPage.form.thinkingConfigHint')}
-                    </span>
-                  </label>
-                  <textarea
-                    className={styles.textarea}
-                    rows={4}
-                    value={entry.thinkingJson ?? ''}
-                    onChange={(e) => onUpdate(idx, { thinkingJson: e.target.value })}
-                    disabled={mutating}
-                    placeholder={'{"levels":["low","medium","high"]}'}
-                  />
-                </div>
               </div>
             ) : null}
           </div>

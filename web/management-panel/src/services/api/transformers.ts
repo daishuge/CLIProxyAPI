@@ -34,6 +34,7 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
       const testModel = item['test-model'];
       const image = normalizeBoolean(item.image);
       const thinking = normalizeRecord(item.thinking);
+      const forceMapping = normalizeBoolean(item['force-mapping']);
       const entry: ModelAlias = { name: String(name) };
       if (alias && alias !== name) {
         entry.alias = String(alias);
@@ -52,6 +53,9 @@ const normalizeModelAliases = (models: unknown): ModelAlias[] => {
       }
       if (thinking) {
         entry.thinking = thinking;
+      }
+      if (forceMapping !== undefined) {
+        entry.forceMapping = forceMapping;
       }
       return entry;
     })

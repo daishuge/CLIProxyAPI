@@ -10,6 +10,13 @@ export interface ModelAlias {
   testModel?: string;
   image?: boolean;
   thinking?: Record<string, unknown>;
+  /**
+   * PPAP fork-only: when true, upstream response `model` fields are rewritten
+   * back to the client alias so clients never see the underlying model name.
+   * Matches the `force-mapping` field on Codex/Claude/Gemini/OpenAI model
+   * entries. Ignored by upstream vanilla Cli-Proxy-API-Management-Center.
+   */
+  forceMapping?: boolean;
 }
 
 export interface ApiKeyEntry {

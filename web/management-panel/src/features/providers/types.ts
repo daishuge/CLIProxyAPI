@@ -88,6 +88,8 @@ export interface ModelEntryInput {
   testModel?: string;
   image?: boolean;
   thinkingJson?: string;
+  /** PPAP fork-only: force upstream response `model` -> client alias. */
+  forceMapping?: boolean;
 }
 
 export interface ApiKeyEntryInput {

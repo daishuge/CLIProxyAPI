@@ -1218,3 +1218,30 @@
   background: var(--failure-badge-bg);
   color: var(--failure-badge-text);
 }
+
+/*
+ * PPAP-only Codex info card shown at the top of the Codex ProviderSheet form.
+ * Explains the fork-only naming conventions (`-fast` suffix, `(level)` thinking,
+ * service_tier via payload rules) without adding new form fields.
+ */
+.codexPpapHintCard {
+  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.35));
+  background: var(--surface-alt, rgba(148, 163, 184, 0.08));
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.codexPpapHintTitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.codexPpapHintList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+}
