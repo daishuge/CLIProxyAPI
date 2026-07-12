@@ -89,10 +89,15 @@ jobs:
             cat "$changelog_notes_file"
           } > "$updated_notes_file"
 
+          # Publish new releases as prerelease so operators can validate the
+          # cross-arch matrix + panel asset before the tag becomes the "Latest"
+          # release consumers see. Flip to full stable with
+          # `gh release edit <tag> --prerelease=false --draft=false --latest=true`
+          # after downstream cutover verification (RPi + smoke matrix) passes.
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$updated_notes_file"
           else
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$updated_notes_file"
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$updated_notes_file" --prerelease
           fi
       # Build the bundled management panel so the release ships a single-file management.html.
       # PPAP vendors the upstream Cli-Proxy-API-Management-Center v1.18.2 tree, which
