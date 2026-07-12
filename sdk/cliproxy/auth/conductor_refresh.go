@@ -534,7 +534,11 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 		log.Debugf("refresh canceled for %s, %s", auth.Provider, auth.ID)
 		return nil, err
 	}
-	log.Debugf("refreshed %s, %s, %v", auth.Provider, auth.ID, err)
+	if err != nil {
+		log.Warnf("refresh failed for %s (%s): %v", auth.Provider, auth.ID, err)
+	} else {
+		log.Debugf("refreshed %s (%s) ok", auth.Provider, auth.ID)
+	}
 	now := time.Now()
 	if err != nil {
 		unauthorized := isUnauthorizedError(err)

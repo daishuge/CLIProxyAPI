@@ -105,8 +105,12 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 				data, errRead := os.ReadFile(path)
 				if errRead == nil {
 					var m map[string]string
-					_ = json.Unmarshal(data, &m)
-					_ = os.Remove(path)
+					if errUnmarshal := json.Unmarshal(data, &m); errUnmarshal != nil {
+						log.Warnf("oauth callback file %q has invalid JSON: %v", path, errUnmarshal)
+					}
+					if errRemove := os.Remove(path); errRemove != nil {
+						log.Debugf("failed to remove oauth callback file %q: %v", path, errRemove)
+					}
 					return m, nil
 				}
 				time.Sleep(500 * time.Millisecond)
@@ -266,8 +270,12 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 			}
 			if data, errR := os.ReadFile(waitFile); errR == nil {
 				var m map[string]string
-				_ = json.Unmarshal(data, &m)
-				_ = os.Remove(waitFile)
+				if errUnmarshal := json.Unmarshal(data, &m); errUnmarshal != nil {
+					log.Warnf("codex oauth callback file %q has invalid JSON: %v", waitFile, errUnmarshal)
+				}
+				if errRemove := os.Remove(waitFile); errRemove != nil {
+					log.Debugf("failed to remove codex oauth callback file %q: %v", waitFile, errRemove)
+				}
 				if errStr := m["error"]; errStr != "" {
 					oauthErr := codex.NewOAuthError(errStr, "", http.StatusBadRequest)
 					log.Error(codex.GetUserFriendlyMessage(oauthErr))
@@ -397,8 +405,12 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 			}
 			if data, errReadFile := os.ReadFile(waitFile); errReadFile == nil {
 				var payload map[string]string
-				_ = json.Unmarshal(data, &payload)
-				_ = os.Remove(waitFile)
+				if errUnmarshal := json.Unmarshal(data, &payload); errUnmarshal != nil {
+					log.Warnf("oauth callback file %q has invalid JSON: %v", waitFile, errUnmarshal)
+				}
+				if errRemove := os.Remove(waitFile); errRemove != nil {
+					log.Debugf("failed to remove oauth callback file %q: %v", waitFile, errRemove)
+				}
 				if errStr := strings.TrimSpace(payload["error"]); errStr != "" {
 					log.Errorf("Authentication failed: %s", errStr)
 					SetOAuthSessionError(state, "Authentication failed")
