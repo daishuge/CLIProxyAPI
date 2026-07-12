@@ -245,6 +245,13 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	// Disable thinking if tool_choice forces tool use (Anthropic API constraint)
 	body = disableThinkingIfToolChoiceForced(body)
 	body = normalizeClaudeSamplingForUpstream(body)
+	// PPAP fork: strip temperature/top_p for Claude model prefixes whose upstream
+	// hard-400s on them (claude-sonnet-5, claude-opus-4-8 and dated/effort variants).
+	// Runs after the upstream sampling normalization so anything it wrote gets
+	// re-scrubbed for affected models. Upstream 5afc0f1d already strips temperature
+	// at the translator layer, but requests hitting /v1/messages in native Claude
+	// format bypass that layer, so we need this direct-executor strip too.
+	body = stripDeprecatedSamplingParams(body, baseModel)
 	// Claude OAuth (and this executor's redact-thinking beta) returns signature-only
 	// thinking blocks unless display is set to "summarized".
 	body = ensureClaudeThinkingDisplay(body)
@@ -438,6 +445,13 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	// Disable thinking if tool_choice forces tool use (Anthropic API constraint)
 	body = disableThinkingIfToolChoiceForced(body)
 	body = normalizeClaudeSamplingForUpstream(body)
+	// PPAP fork: strip temperature/top_p for Claude model prefixes whose upstream
+	// hard-400s on them (claude-sonnet-5, claude-opus-4-8 and dated/effort variants).
+	// Runs after the upstream sampling normalization so anything it wrote gets
+	// re-scrubbed for affected models. Upstream 5afc0f1d already strips temperature
+	// at the translator layer, but requests hitting /v1/messages in native Claude
+	// format bypass that layer, so we need this direct-executor strip too.
+	body = stripDeprecatedSamplingParams(body, baseModel)
 	// Claude OAuth (and this executor's redact-thinking beta) returns signature-only
 	// thinking blocks unless display is set to "summarized".
 	body = ensureClaudeThinkingDisplay(body)
@@ -916,6 +930,54 @@ func ensureClaudeThinkingDisplay(body []byte) []byte {
 		return body
 	}
 	return out
+}
+
+// deprecatedSamplingParamModelPrefixes lists Claude model id prefixes whose
+// upstream (Anthropic / CPA OAuth) rejects the sampling params temperature and
+// top_p with a hard 400 ("`temperature` is deprecated for this model" /
+// "`top_p` is deprecated for this model"). Verified empirically 2026-07-01:
+// claude-sonnet-5 and claude-opus-4-8 reject both, while claude-sonnet-4-6 still
+// accepts temperature. Prefix match covers dated/effort variants
+// (e.g. claude-opus-4-8-high). Extend this list as Anthropic deprecates the
+// params for further models; an un-listed model simply keeps the old passthrough
+// behavior and would surface any new deprecation as a loud 400.
+var deprecatedSamplingParamModelPrefixes = []string{
+	"claude-sonnet-5",
+	"claude-opus-4-8",
+}
+
+func modelDeprecatesSamplingParams(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	for _, prefix := range deprecatedSamplingParamModelPrefixes {
+		if strings.HasPrefix(m, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// stripDeprecatedSamplingParams removes temperature and top_p for Claude models
+// that reject them (see deprecatedSamplingParamModelPrefixes). OpenAI-compatible
+// clients routinely send temperature (and sometimes top_p); without stripping,
+// an OpenAI-format request translated to one of these models fails outright with
+// a 400, which surfaces to users as an opaque error. Runs AFTER
+// normalizeClaudeSamplingForUpstream so any temperature the upstream normalizer
+// left behind for non-thinking paths is also removed for the affected models.
+// No-op for models that still accept the params, preserving their sampling
+// behavior. Upstream 5afc0f1d strips temperature at the translator layer, but
+// requests hitting /v1/messages in native Claude format bypass that layer, so
+// this direct-executor strip is still required.
+func stripDeprecatedSamplingParams(body []byte, baseModel string) []byte {
+	if !modelDeprecatesSamplingParams(baseModel) {
+		return body
+	}
+	if gjson.GetBytes(body, "temperature").Exists() {
+		body, _ = sjson.DeleteBytes(body, "temperature")
+	}
+	if gjson.GetBytes(body, "top_p").Exists() {
+		body, _ = sjson.DeleteBytes(body, "top_p")
+	}
+	return body
 }
 
 type compositeReadCloser struct {
