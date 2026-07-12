@@ -5921,7 +5921,15 @@ func (m *Manager) refreshAuthForRequest(ctx context.Context, id, failedAccessTok
 		log.Debugf("refresh canceled for %s, %s", auth.Provider, auth.ID)
 		return nil, err
 	}
-	log.Debugf("refreshed %s, %s, %v", auth.Provider, auth.ID, err)
+	if err != nil {
+		// Loud log for refresh failures so operators notice repeated failures
+		// even when downstream error handling silences them. The auth is also
+		// marked unavailable + rescheduled below, so a single log at Warn is
+		// sufficient (no need to spam Error on every retry).
+		log.Warnf("refresh failed for %s (%s): %v", auth.Provider, auth.ID, err)
+	} else {
+		log.Debugf("refreshed %s (%s) ok", auth.Provider, auth.ID)
+	}
 	now := time.Now()
 	if err != nil {
 		unauthorized := isUnauthorizedError(err)

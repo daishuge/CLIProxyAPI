@@ -124,14 +124,11 @@ type apiKeyTokenStats struct {
 }
 
 // apiKeyUsageStatsLookup resolves the aggregated usage for a downstream API
-// key. It is nil until the Step6 usage LoggerPlugin registers a real provider
-// via SetAPIKeyUsageStatsLookup. While nil, every usage-derived budget
-// (request count, input/total tokens, estimated USD cost) degrades to a
-// permissive no-op so that only the model allow/deny and enabled controls are
-// enforced.
-//
-// TODO(step6): wire this to the ported in-memory RequestStatistics snapshot so
-// token-count and estimated-cost budgets become enforceable.
+// key. server.go wires this at startup via installAPIKeyUsageStatsLookup, so
+// under normal boot it is non-nil and the request-count, input/total-token, and
+// estimated-cost budgets are enforceable. If ever left nil (e.g. tests that
+// reset it), every usage-derived budget degrades to a permissive no-op so that
+// only the model allow/deny and enabled controls are enforced.
 var apiKeyUsageStatsLookup func(apiKey string) (apiKeyUsageStats, bool)
 
 // SetAPIKeyUsageStatsLookup installs the usage statistics provider used by the
@@ -142,7 +139,8 @@ func SetAPIKeyUsageStatsLookup(lookup func(apiKey string) (apiKeyUsageStats, boo
 
 // withinAPIKeyBudget reports whether the supplied control is still within its
 // configured request/token/cost budgets. When no usage provider is installed
-// (pre-Step6) it returns true, since the underlying counters are unavailable.
+// it returns true, since the underlying counters are unavailable — this is only
+// expected in tests that intentionally reset the lookup.
 func withinAPIKeyBudget(control *config.APIKeyControl) bool {
 	if control == nil || control.Unlimited {
 		return true
@@ -151,8 +149,9 @@ func withinAPIKeyBudget(control *config.APIKeyControl) bool {
 		return true
 	}
 	if apiKeyUsageStatsLookup == nil {
-		// Usage aggregation not yet available (Step6). Budgets cannot be
-		// enforced without per-key counters, so the request is allowed.
+		// Usage aggregation not installed (only expected in tests that reset
+		// the lookup). Budgets cannot be enforced without per-key counters,
+		// so the request is allowed.
 		return true
 	}
 	key := strings.TrimSpace(control.APIKey)
