@@ -8,15 +8,8 @@ export type ProviderBrand =
   | 'gemini'
   | 'codex'
   | 'claude'
-  | 'claudeApi'
   | 'vertex'
-  | 'openaiCompatibility'
-  | 'apikeyFun'
-  | 'code0'
-  | 'fennoAI'
-  | 'qiniuCloud';
-
-export type SponsorProviderBrand = 'apikeyFun' | 'code0' | 'fennoAI' | 'qiniuCloud';
+  | 'openaiCompatibility';
 
 export const PROVIDER_SORT_BY_VALUES = ['name', 'priority', 'recent-success'] as const;
 export type ProviderSortBy = (typeof PROVIDER_SORT_BY_VALUES)[number];
@@ -28,37 +21,8 @@ export type ProviderResourceSelector =
   | { brand: 'gemini'; apiKey: string; baseUrl?: string; index: number }
   | { brand: 'codex'; apiKey: string; baseUrl?: string; index: number }
   | { brand: 'claude'; apiKey: string; baseUrl?: string; index: number }
-  | { brand: 'claudeApi'; apiKey: string; baseUrl?: string; index: number }
   | { brand: 'vertex'; apiKey: string; baseUrl?: string; index: number }
-  | { brand: 'openaiCompatibility'; name: string; index: number }
-  | {
-      brand: 'apikeyFun';
-      openaiIndices: number[];
-      claudeIndices: number[];
-      codexIndices: number[];
-      geminiIndices: number[];
-    }
-  | {
-      brand: 'code0';
-      openaiIndices: number[];
-      claudeIndices: number[];
-      codexIndices: number[];
-      geminiIndices: number[];
-    }
-  | {
-      brand: 'fennoAI';
-      openaiIndices: number[];
-      claudeIndices: number[];
-      codexIndices: number[];
-      geminiIndices: number[];
-    }
-  | {
-      brand: 'qiniuCloud';
-      openaiIndices: number[];
-      claudeIndices: number[];
-      codexIndices: number[];
-      geminiIndices: number[];
-    };
+  | { brand: 'openaiCompatibility'; name: string; index: number };
 
 export interface ProviderResourceFlags {
   cloakEnabled?: boolean;
@@ -113,13 +77,6 @@ export interface ProviderSnapshot {
   groups: ProviderGroup[];
 }
 
-export interface SponsorProviderRaw {
-  openai: Array<{ config: OpenAIProviderConfig; index: number }>;
-  claude: Array<{ config: ProviderKeyConfig; index: number }>;
-  codex: Array<{ config: ProviderKeyConfig; index: number }>;
-  gemini: Array<{ config: GeminiKeyConfig; index: number }>;
-}
-
 /**
  * 通用 Sheet 表单值。
  * Gemini/Codex/Claude/Vertex/OpenAI 共用基础字段,各自启用 advanced 区。
@@ -131,21 +88,6 @@ export interface ModelEntryInput {
   testModel?: string;
   image?: boolean;
   thinkingJson?: string;
-}
-
-export type SponsorProtocol = 'openai' | 'codex' | 'claude' | 'gemini';
-
-export interface SponsorKeyEntryInput {
-  protocol: SponsorProtocol;
-  apiKey: string;
-  existingApiKey?: string;
-  baseUrl: string;
-  proxyUrl: string;
-  prefix: string;
-  disabled: boolean;
-  disableCooling?: boolean;
-  priority?: number;
-  models: ModelEntryInput[];
 }
 
 export interface ApiKeyEntryInput {
@@ -187,6 +129,10 @@ export interface ProviderEntryFormInput {
   /** OpenAI persists this; Gemini/Claude use it for one-off connectivity tests. */
   testModel?: string;
   apiKeyEntries?: ApiKeyEntryInput[];
-  /** APIKEY.FUN stores one grouped key per platform protocol. */
-  sponsorKeyEntries?: SponsorKeyEntryInput[];
 }
+
+// Re-exported for legacy raw import sites — provider raw config records.
+export type ProviderRawConfig =
+  | GeminiKeyConfig
+  | OpenAIProviderConfig
+  | ProviderKeyConfig;

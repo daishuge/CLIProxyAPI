@@ -5,12 +5,10 @@ import { IconLoader2, IconPencil } from '@/components/ui/icons';
 import type { ProviderRecentUsageMap } from '@/components/providers/utils';
 import { useNotificationStore } from '@/stores';
 import { PROVIDER_DESCRIPTORS } from '../descriptors';
-import { isMultiProtocolSponsorBrand } from '../sponsorDefinitions';
 import type { ProviderBrand, ProviderEntryFormInput, ProviderResource } from '../types';
 import type { UseProviderWorkbenchResult } from '../useProviderWorkbench';
 import { BaseProviderForm } from './forms/BaseProviderForm';
 import { ResourceDetailView } from './ResourceDetailView';
-import { SponsorProviderForm } from './forms/SponsorProviderForm';
 import styles from './forms/sharedForm.module.scss';
 
 type SheetMode = 'detail' | 'create' | 'edit';
@@ -143,20 +141,6 @@ export function ProviderSheet({
       return <ResourceDetailView resource={state.resource} usageByProvider={usageByProvider} />;
     }
     const formKey = `${state.brand}:${state.resource?.id ?? 'new'}:${state.mode}`;
-    if (isMultiProtocolSponsorBrand(state.brand)) {
-      return (
-        <SponsorProviderForm
-          key={formKey}
-          brand={state.brand}
-          resource={state.resource}
-          mode={state.mode}
-          mutating={formMutating}
-          formId={formId}
-          onSubmit={state.mode === 'create' ? handleCreate : handleUpdate}
-          onDirtyChange={handleDirtyChange}
-        />
-      );
-    }
     return (
       <BaseProviderForm
         key={formKey}
@@ -242,17 +226,7 @@ export function ProviderSheet({
         route:
           state.brand === 'openaiCompatibility'
             ? '/ai-providers/openai'
-            : state.brand === 'apikeyFun'
-              ? '/quick-start'
-              : state.brand === 'claudeApi'
-                ? '/ai-providers/claudeapi'
-                : state.brand === 'code0'
-                  ? '/ai-providers/code0'
-                  : state.brand === 'fennoAI'
-                    ? '/ai-providers/fennoai'
-                    : state.brand === 'qiniuCloud'
-                      ? '/ai-providers/qiniu'
-                      : `/ai-providers/${state.brand}`,
+            : `/ai-providers/${state.brand}`,
       })}
       footer={footer}
       closeDisabled={submitting}

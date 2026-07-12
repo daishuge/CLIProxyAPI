@@ -97,7 +97,6 @@
   },
   "nav": {
     "dashboard": "仪表盘",
-    "quick_start": "快速开始",
     "ai_providers": "AI 提供商",
     "auth_files": "认证文件",
     "oauth": "OAuth 登录",
@@ -117,7 +116,6 @@
   },
   "nav_meta": {
     "dashboard": "运行总览",
-    "quick_start": "快速配置",
     "ai_providers": "上游模型路由",
     "auth_files": "Auth 文件与凭证",
     "oauth": "OAuth 授权登录",
@@ -137,9 +135,6 @@
     "routing_strategy": "路由策略",
     "available_models": "可用模型",
     "available_models_desc": "所有提供商的模型总数",
-    "quick_start_card": "快速开始",
-    "quick_start_entry": "快速开始",
-    "quick_start_entry_desc": "进入快速开始页面",
     "welcome_back": "欢迎回来",
     "greeting_morning": "早上好",
     "greeting_afternoon": "下午好",
@@ -1318,20 +1313,14 @@
     },
     "categories": {
       "title": "提供商",
-      "quickFill": "快速填入",
       "activeCount": "{{active}}/{{total}} 活跃"
     },
     "providerNames": {
       "gemini": "Gemini",
       "codex": "Codex",
       "claude": "Claude",
-      "claudeApi": "ClaudeAPI",
       "vertex": "Vertex",
-      "openaiCompatibility": "OpenAI 兼容",
-      "apikeyFun": "APIKEY.FUN",
-      "code0": "Code0",
-      "fennoAI": "FennoAI",
-      "qiniuCloud": "七牛云"
+      "openaiCompatibility": "OpenAI 兼容"
     },
     "table": {
       "key": "密钥",
@@ -1350,73 +1339,6 @@
       "empty": "尚未添加配置,点击右上角新建。",
       "filterPlaceholder": "搜索密钥、地址、前缀…",
       "description": "在 {{route}} 下管理资源"
-    },
-    "sponsor": {
-      "protocolSummary": "Anthropic / OpenAI / Gemini / Codex API (Responses)",
-      "detailHint": "{{provider}} 会按协议分别写入对应的 API Key 配置,这里只做聚合管理。",
-      "registerLink": "点此注册",
-      "registerNow": "立即注册",
-      "dashboardLink": "控制面板",
-      "emptyRegisterHint": "尚未添加配置",
-      "apiKeyHint": "此 Key 只会写入当前选择的分组/协议配置。",
-      "usageCheck": "查询额度",
-      "usageChecking": "查询中",
-      "usageRemaining": "剩余额度: {{amount}} {{unit}}",
-      "usageBreakdown": "已用 {{used}} / 总额 {{limit}}",
-      "usageStatus": "状态: {{status}}",
-      "usageInvalid": "Key 无效",
-      "usageEmpty": "端点未返回额度数据",
-      "usageApiKeyRequired": "API 密钥必填",
-      "aggregationConflict": "此聚合提供商包含多条后端配置或多个 OpenAI 密钥。为避免数据丢失，请在源码配置中编辑。",
-      "partialMutationWarning": "操作失败，但一个或多个协议可能已更新。已重新读取最新配置，请检查后再重试。",
-      "groupedKeysTitle": "分组 Key",
-      "groupedKeysHint": "平台创建 Key 时可能需要选择分组,这里每个分组 Key 只管理一个协议,模型也只从该协议拉取。",
-      "groupedKey": "分组 Key #{{index}}",
-      "addGroupedKey": "添加分组 Key",
-      "removeGroupedKey": "删除分组 Key",
-      "protocol": "分组/协议",
-      "protocolHint": "请选择此 Key 对应的分组/协议。",
-      "protocolEndpoint": "当前协议地址",
-      "urlMode": "{{provider}} URL",
-      "urlHint": "不同 URL 的使用规范一致,保存时只会写入当前分组协议对应地址。",
-      "urlOptions": {
-        "standard": "普通 URL",
-        "direct": "专线直连 URL",
-        "domestic": "国内线路",
-        "overseas": "海外线路"
-      },
-      "urlOptionDescriptions": {
-        "domestic": "面向中国大陆用户和部署在中国大陆网络环境中的业务，通常可获得更低延迟。",
-        "overseas": "面向海外部署、跨境访问或需要访问境外模型的业务。"
-      },
-      "modelsTitle": "协议模型配置",
-      "modelsHint": "可分别限制或别名映射 Codex API、Anthropic、Gemini 与 OpenAI 兼容入口的模型。",
-      "protocolModels": {
-        "codex": "Codex API 模型",
-        "anthropic": "Anthropic 模型",
-        "gemini": "Gemini 模型",
-        "openai": "OpenAI 兼容模型"
-      },
-      "protocolModelHints": {
-        "codex": "写入 Codex API 配置的 models,可从 /v1/models 拉取后设置别名。",
-        "anthropic": "写入 Anthropic 配置的 models,可从 /v1/models 拉取后设置别名。",
-        "gemini": "写入 Gemini 配置的 models,可从 /v1beta/models 拉取后设置别名。",
-        "openai": "写入 OpenAI 兼容配置的 models,可从 /models 拉取后设置别名。"
-      },
-      "validation": {
-        "keyRequired": "请为每个分组 Key 填写 API Key。",
-        "protocolDuplicate": "每个协议只能添加一个分组 Key。"
-      },
-      "openaiEntries": "OpenAI 兼容密钥数",
-      "codexEntries": "Codex API 密钥数",
-      "anthropicEntries": "Anthropic 密钥数",
-      "geminiEntries": "Gemini 密钥数",
-      "protocols": {
-        "anthropic": "Anthropic",
-        "openai": "OpenAI 兼容",
-        "gemini": "Gemini",
-        "codexResponses": "Codex API (Responses)"
-      }
     },
     "status": {
       "active": "活跃",

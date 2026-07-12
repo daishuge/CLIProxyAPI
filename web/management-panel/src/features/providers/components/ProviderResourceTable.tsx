@@ -27,7 +27,6 @@ import {
 import type { OpenAIProviderConfig } from '@/types';
 import type { StatusBarData } from '@/utils/recentRequests';
 import type { ProviderResource } from '../types';
-import { isMultiProtocolSponsorBrand } from '../sponsorDefinitions';
 import styles from './ProviderResourceTable.module.scss';
 import statusBarStyles from './providerStatusBar.module.scss';
 
@@ -44,12 +43,6 @@ interface ProviderResourceTableProps {
 
 const columnWidths = ['180px', '220px', '72px', '138px', '174px', '176px'];
 
-const isSponsorResource = (resource: ProviderResource): boolean =>
-  isMultiProtocolSponsorBrand(resource.brand);
-
-const getUsageProvider = (resource: ProviderResource): string =>
-  resource.brand === 'claudeApi' ? 'claude' : resource.brand;
-
 const resolveStatusBarData = (
   resource: ProviderResource,
   usageByProvider: ProviderRecentUsageMap
@@ -59,7 +52,7 @@ const resolveStatusBarData = (
   }
   return getProviderRecentStatusData(
     usageByProvider,
-    getUsageProvider(resource),
+    resource.brand,
     resource.apiKey ?? undefined,
     resource.baseUrl ?? undefined
   );
@@ -74,7 +67,7 @@ const resolveTotalStats = (
   }
   return getProviderTotalStats(
     usageByProvider,
-    getUsageProvider(resource),
+    resource.brand,
     resource.apiKey ?? undefined,
     resource.baseUrl ?? undefined
   );
@@ -105,19 +98,8 @@ export function ProviderResourceTable({
     </span>
   );
 
-  const renderProtocolSummary = (r: ProviderResource) =>
-    (r.flags.protocols ?? [])
-      .map((protocol) => t(`providersPage.sponsor.protocols.${protocol}`))
-      .join(' / ');
-
   const renderModelsSummary = (r: ProviderResource) => {
     const items: ReactNode[] = [];
-    if (isSponsorResource(r)) {
-      (r.flags.protocols ?? []).forEach((protocol) => {
-        items.push(renderFlagTag(protocol, t(`providersPage.sponsor.protocols.${protocol}`)));
-      });
-      return <div className={styles.metricsCell}>{items}</div>;
-    }
     if (r.brand === 'openaiCompatibility') {
       items.push(
         renderMetric('models', t('providersPage.table.metrics.models'), r.modelCount),
@@ -157,16 +139,6 @@ export function ProviderResourceTable({
   };
 
   const renderPrimary = (r: ProviderResource) => {
-    if (isSponsorResource(r)) {
-      return (
-        <div className={styles.primaryCell}>
-          <span className={styles.primaryName}>{r.name ?? r.identifier}</span>
-          <span className={styles.primarySub}>
-            {r.apiKeyPreview ?? t('providersPage.status.notConfigured')}
-          </span>
-        </div>
-      );
-    }
     if (r.brand === 'openaiCompatibility') {
       const extra = r.apiKeyEntryCount > 1 ? ` · +${r.apiKeyEntryCount - 1}` : '';
       return (
@@ -185,9 +157,6 @@ export function ProviderResourceTable({
   };
 
   const renderBaseUrl = (r: ProviderResource) => {
-    if (isSponsorResource(r)) {
-      return <span className={styles.baseUrl}>{renderProtocolSummary(r)}</span>;
-    }
     if (r.brand === 'claude' && !r.baseUrl) {
       return (
         <span className={styles.baseUrl}>
@@ -234,7 +203,7 @@ export function ProviderResourceTable({
               <TableCell>
                 <div className={styles.statusCell}>
                   {renderStatus(resource)}
-                  {usageByProvider && !isSponsorResource(resource) ? (
+                  {usageByProvider ? (
                     <>
                       {(() => {
                         const stats = resolveTotalStats(resource, usageByProvider);
