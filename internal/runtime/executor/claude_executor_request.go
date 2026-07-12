@@ -448,6 +448,30 @@ func normalizeClaudeSamplingForUpstream(body []byte, nativeOwned bool) []byte {
 	return body
 }
 
+var deprecatedSamplingParamModelPrefixes = []string{
+	"claude-sonnet-5",
+	"claude-opus-4-8",
+}
+
+func modelDeprecatesSamplingParams(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	for _, prefix := range deprecatedSamplingParamModelPrefixes {
+		if strings.HasPrefix(model, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func stripDeprecatedSamplingParams(body []byte, baseModel string) []byte {
+	if !modelDeprecatesSamplingParams(baseModel) {
+		return body
+	}
+	body, _ = sjson.DeleteBytes(body, "temperature")
+	body, _ = sjson.DeleteBytes(body, "top_p")
+	return body
+}
+
 type compositeReadCloser struct {
 	io.Reader
 	closers []func() error
