@@ -679,8 +679,12 @@ func TestModelsWithClientVersionReturnsCodexCatalog(t *testing.T) {
 	if got, _ := custom["display_name"].(string); got != "Custom Codex Model" {
 		t.Fatalf("custom display_name = %q, want Custom Codex Model", got)
 	}
-	if got := int(codexClientTestPriority(custom["priority"])); got != 129 {
-		t.Fatalf("custom priority = %v, want 129", custom["priority"])
+	// PPAP fork adds extra Codex client models (fast mode, thinking aliases,
+	// service tier variants) which shifts the derived priority by +14 versus
+	// upstream. Keep the assertion honest to the fork's catalog rather than
+	// upstream's baseline.
+	if got := int(codexClientTestPriority(custom["priority"])); got != 143 {
+		t.Fatalf("custom priority = %v, want 143", custom["priority"])
 	}
 	if got, _ := custom["description"].(string); got != "Custom model from registry" {
 		t.Fatalf("custom description = %q, want Custom model from registry", got)
