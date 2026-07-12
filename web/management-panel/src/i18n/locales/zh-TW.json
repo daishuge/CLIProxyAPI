@@ -998,6 +998,30 @@
           "override_raw_rules_desc": "始終按原始 JSON 片段覆寫參數值，適合 response_format、schema 等複雜欄位",
           "filter_rules": "篩選規則",
           "filter_rules_desc": "透過 JSON Path 預篩選上游請求體，自動剔除不合規/冗餘參數（Request Sanitization）"
+        },
+        "ppap": {
+          "title": "PPAP 擴充",
+          "description": "Playful Proxy API 私有後端能力：上游預置 Prompt、上游併發閘門、按 Key 的 API Key 管控與日誌保留。",
+          "preset_prompt_group": "預置 Prompt",
+          "preset_prompt_group_desc": "僅在發往上游的請求中注入系統級 Prompt，不會回流到客戶端。",
+          "preset_prompt_enabled": "啟用預置 Prompt 注入",
+          "preset_prompt_enabled_hint": "啟用後設定的 Prompt 會拼入上游請求，不會回傳給客戶端。",
+          "preset_prompt_text": "預置 Prompt",
+          "preset_prompt_text_placeholder": "例如：請始終以嚴格 JSON 格式回傳。",
+          "preset_prompt_text_hint": "啟用時必填。回應中不會向客戶端洩漏此內容。",
+          "preset_prompt_max_bytes": "最大位元組數",
+          "preset_prompt_max_bytes_hint": "Prompt 上限（位元組），會被限制到 262144（256 KiB）以內。",
+          "upstream_concurrency_group": "上游併發閘門",
+          "upstream_concurrency_group_desc": "限制到達上游提供者的併發請求數。0 表示不限制。",
+          "upstream_concurrency_default": "預設限流",
+          "upstream_concurrency_default_hint": "未明確設定的 provider 會使用此值。0 表示關閉閘門。",
+          "upstream_concurrency_queue_timeout": "排隊逾時（秒）",
+          "upstream_concurrency_queue_timeout_hint": "等候取得許可的最長時間。為 0 時啟用的閘門預設使用 30 秒。",
+          "raw_yaml_group": "進階設定（原始 YAML）",
+          "raw_yaml_group_desc": "複雜巢狀結構請在原始 YAML 編輯器中直接維護，PPAP 會照常驗證。",
+          "raw_yaml_api_key_controls": "按 Key 的 API Key 管控（速率/Token/費用預算、允許/禁止模型、按 Key 的預置 Prompt）請在原始 YAML 的 api-key-controls 下編輯。",
+          "raw_yaml_immersive_translate": "沉浸式翻譯守衛由後端自動辨識，無獨立設定項；只在符合目標 payload 時啟用。",
+          "raw_yaml_log_controls": "日誌保留與日誌設定共用（logs-max-total-size-mb、error-logs-max-files）。"
         }
       },
       "api_keys": {

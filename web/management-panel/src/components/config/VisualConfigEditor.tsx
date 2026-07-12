@@ -482,6 +482,12 @@ export function VisualConfigEditor({
         icon: IconCode,
         errorCount: hasPayloadValidationErrors ? 1 : 0,
       },
+      {
+        id: 'ppap',
+        title: t('config_management.visual.sections.ppap.title'),
+        icon: IconSlidersHorizontal,
+        errorCount: 0,
+      },
     ],
     [countErrors, hasPayloadValidationErrors, t]
   );
@@ -1823,6 +1829,149 @@ export function VisualConfigEditor({
                     />
                   </Collapsible>
                 </FieldAnchor>
+              </SectionStack>
+            </ConfigSection>
+
+            <ConfigSection
+              id="ppap"
+              ref={(node) => {
+                sectionRefs.current.ppap = node;
+              }}
+              indexLabel="08"
+              icon={<IconSlidersHorizontal size={16} />}
+              title={t('config_management.visual.sections.ppap.title')}
+              description={t('config_management.visual.sections.ppap.description')}
+            >
+              <SectionStack>
+                <Collapsible
+                  label={t('config_management.visual.sections.ppap.preset_prompt_group')}
+                  hint={t('config_management.visual.sections.ppap.preset_prompt_group_desc')}
+                  defaultOpen
+                >
+                  <SectionStack>
+                    <FieldAnchor fieldId="ppapPresetPromptEnabled">
+                      <ToggleRow
+                        title={t('config_management.visual.sections.ppap.preset_prompt_enabled')}
+                        description={t(
+                          'config_management.visual.sections.ppap.preset_prompt_enabled_hint'
+                        )}
+                        checked={values.ppapPresetPromptEnabled}
+                        disabled={disabled}
+                        onChange={(value) => onChange({ ppapPresetPromptEnabled: value })}
+                      />
+                    </FieldAnchor>
+                    <FieldAnchor fieldId="ppapPresetPromptText">
+                      <label className="form-group">
+                        <span>
+                          {t('config_management.visual.sections.ppap.preset_prompt_text')}
+                        </span>
+                        <textarea
+                          className="input"
+                          rows={6}
+                          value={values.ppapPresetPromptText}
+                          placeholder={t(
+                            'config_management.visual.sections.ppap.preset_prompt_text_placeholder'
+                          )}
+                          onChange={(event) =>
+                            onChange({ ppapPresetPromptText: event.target.value })
+                          }
+                          disabled={disabled}
+                        />
+                        <span className="hint">
+                          {t('config_management.visual.sections.ppap.preset_prompt_text_hint')}
+                        </span>
+                      </label>
+                    </FieldAnchor>
+                    <SectionGrid>
+                      <FieldAnchor fieldId="ppapPresetPromptMaxBytes">
+                        <Input
+                          label={t(
+                            'config_management.visual.sections.ppap.preset_prompt_max_bytes'
+                          )}
+                          type="number"
+                          placeholder="32768"
+                          value={values.ppapPresetPromptMaxBytes}
+                          onChange={(event) =>
+                            onChange({ ppapPresetPromptMaxBytes: event.target.value })
+                          }
+                          disabled={disabled}
+                          hint={t(
+                            'config_management.visual.sections.ppap.preset_prompt_max_bytes_hint'
+                          )}
+                        />
+                      </FieldAnchor>
+                    </SectionGrid>
+                  </SectionStack>
+                </Collapsible>
+
+                <Divider />
+
+                <Collapsible
+                  label={t('config_management.visual.sections.ppap.upstream_concurrency_group')}
+                  hint={t(
+                    'config_management.visual.sections.ppap.upstream_concurrency_group_desc'
+                  )}
+                  defaultOpen
+                >
+                  <SectionGrid>
+                    <FieldAnchor fieldId="ppapUpstreamConcurrencyDefault">
+                      <Input
+                        label={t(
+                          'config_management.visual.sections.ppap.upstream_concurrency_default'
+                        )}
+                        type="number"
+                        placeholder="0"
+                        value={values.ppapUpstreamConcurrencyDefault}
+                        onChange={(event) =>
+                          onChange({ ppapUpstreamConcurrencyDefault: event.target.value })
+                        }
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.ppap.upstream_concurrency_default_hint'
+                        )}
+                      />
+                    </FieldAnchor>
+                    <FieldAnchor fieldId="ppapUpstreamConcurrencyQueueTimeoutSeconds">
+                      <Input
+                        label={t(
+                          'config_management.visual.sections.ppap.upstream_concurrency_queue_timeout'
+                        )}
+                        type="number"
+                        placeholder="30"
+                        value={values.ppapUpstreamConcurrencyQueueTimeoutSeconds}
+                        onChange={(event) =>
+                          onChange({
+                            ppapUpstreamConcurrencyQueueTimeoutSeconds: event.target.value,
+                          })
+                        }
+                        disabled={disabled}
+                        hint={t(
+                          'config_management.visual.sections.ppap.upstream_concurrency_queue_timeout_hint'
+                        )}
+                      />
+                    </FieldAnchor>
+                  </SectionGrid>
+                </Collapsible>
+
+                <Divider />
+
+                <Collapsible
+                  label={t('config_management.visual.sections.ppap.raw_yaml_group')}
+                  hint={t('config_management.visual.sections.ppap.raw_yaml_group_desc')}
+                  defaultOpen={false}
+                >
+                  <div style={{ padding: '8px 0' }}>
+                    <p style={{ margin: '0 0 8px 0' }}>
+                      {t('config_management.visual.sections.ppap.raw_yaml_api_key_controls')}
+                    </p>
+                    <p style={{ margin: '0 0 8px 0' }}>
+                      {t('config_management.visual.sections.ppap.raw_yaml_immersive_translate')}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      {t('config_management.visual.sections.ppap.raw_yaml_log_controls')}
+                    </p>
+                  </div>
+                </Collapsible>
               </SectionStack>
             </ConfigSection>
           </div>

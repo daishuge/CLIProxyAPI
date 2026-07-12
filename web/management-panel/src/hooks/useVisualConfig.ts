@@ -907,6 +907,11 @@ function getNextDirtyFields(
       'routingStrategy',
       'routingSessionAffinity',
       'routingSessionAffinityTTL',
+      'ppapPresetPromptEnabled',
+      'ppapPresetPromptText',
+      'ppapPresetPromptMaxBytes',
+      'ppapUpstreamConcurrencyDefault',
+      'ppapUpstreamConcurrencyQueueTimeoutSeconds',
     ] as Array<keyof VisualConfigValues>
   ).forEach(updateScalarDirty);
 
@@ -1064,6 +1069,9 @@ export function useVisualConfig() {
       const codex = asRecord(parsed.codex);
       const claudeHeaderDefaults = asRecord(parsed['claude-header-defaults']);
       const codexHeaderDefaults = asRecord(parsed['codex-header-defaults']);
+      // PPAP-only extensions.
+      const presetPrompt = asRecord(parsed['preset-prompt']);
+      const upstreamConcurrency = asRecord(parsed['upstream-concurrency']);
 
       const newValues: VisualConfigValues = {
         host: typeof parsed.host === 'string' ? parsed.host : '',
@@ -1180,6 +1188,15 @@ export function useVisualConfig() {
           bootstrapRetries: String(streaming?.['bootstrap-retries'] ?? ''),
           nonstreamKeepaliveInterval: String(parsed['nonstream-keepalive-interval'] ?? ''),
         },
+
+        ppapPresetPromptEnabled: Boolean(presetPrompt?.enabled),
+        ppapPresetPromptText:
+          typeof presetPrompt?.prompt === 'string' ? presetPrompt.prompt : '',
+        ppapPresetPromptMaxBytes: String(presetPrompt?.['max-bytes'] ?? ''),
+        ppapUpstreamConcurrencyDefault: String(upstreamConcurrency?.default ?? ''),
+        ppapUpstreamConcurrencyQueueTimeoutSeconds: String(
+          upstreamConcurrency?.['queue-timeout-seconds'] ?? ''
+        ),
       };
 
       dispatch({ type: 'load_success', values: newValues });
@@ -1517,6 +1534,52 @@ export function useVisualConfig() {
 
         if (dirtyFields.has('streaming.nonstreamKeepaliveInterval')) {
           setIntFromStringInDoc(doc, ['nonstream-keepalive-interval'], nonstreamKeepaliveInterval);
+        }
+
+        // PPAP: preset-prompt block (root-level YAML map)
+        const presetPromptDirty =
+          dirtyFields.has('ppapPresetPromptEnabled') ||
+          dirtyFields.has('ppapPresetPromptText') ||
+          dirtyFields.has('ppapPresetPromptMaxBytes');
+        if (presetPromptDirty) {
+          ensureMapInDoc(doc, ['preset-prompt']);
+          if (dirtyFields.has('ppapPresetPromptEnabled')) {
+            setBooleanInDoc(doc, ['preset-prompt', 'enabled'], values.ppapPresetPromptEnabled);
+          }
+          if (dirtyFields.has('ppapPresetPromptText')) {
+            setStringInDoc(doc, ['preset-prompt', 'prompt'], values.ppapPresetPromptText);
+          }
+          if (dirtyFields.has('ppapPresetPromptMaxBytes')) {
+            setIntFromStringInDoc(
+              doc,
+              ['preset-prompt', 'max-bytes'],
+              values.ppapPresetPromptMaxBytes
+            );
+          }
+          deleteIfMapEmpty(doc, ['preset-prompt']);
+        }
+
+        // PPAP: upstream-concurrency block (root-level YAML map)
+        const upstreamConcurrencyDirty =
+          dirtyFields.has('ppapUpstreamConcurrencyDefault') ||
+          dirtyFields.has('ppapUpstreamConcurrencyQueueTimeoutSeconds');
+        if (upstreamConcurrencyDirty) {
+          ensureMapInDoc(doc, ['upstream-concurrency']);
+          if (dirtyFields.has('ppapUpstreamConcurrencyDefault')) {
+            setIntFromStringInDoc(
+              doc,
+              ['upstream-concurrency', 'default'],
+              values.ppapUpstreamConcurrencyDefault
+            );
+          }
+          if (dirtyFields.has('ppapUpstreamConcurrencyQueueTimeoutSeconds')) {
+            setIntFromStringInDoc(
+              doc,
+              ['upstream-concurrency', 'queue-timeout-seconds'],
+              values.ppapUpstreamConcurrencyQueueTimeoutSeconds
+            );
+          }
+          deleteIfMapEmpty(doc, ['upstream-concurrency']);
         }
 
         if (hasPayloadDirtyFields(dirtyFields)) {

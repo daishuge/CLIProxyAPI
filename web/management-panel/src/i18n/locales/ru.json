@@ -959,6 +959,30 @@
           "override_raw_rules_desc": "Всегда перезаписывать значения как raw JSON-фрагменты; полезно для response_format, схем и других сложных полей",
           "filter_rules": "Правила фильтрации",
           "filter_rules_desc": "Предварительно фильтровать тело исходящего запроса через JSON Path, автоматически удалять несоответствующие или лишние параметры (санитизация запроса)"
+        },
+        "ppap": {
+          "title": "Расширения PPAP",
+          "description": "Возможности бекенда только для Playful Proxy API: preset-промпт, шлюз по конкуренции апстрима, per-key ограничения и хранение логов.",
+          "preset_prompt_group": "Preset-промпт",
+          "preset_prompt_group_desc": "Вставляет системный промпт в апстрим-запросы и не возвращает его клиенту.",
+          "preset_prompt_enabled": "Включить preset-промпт",
+          "preset_prompt_enabled_hint": "При включении настроенный промпт вставляется только в запросы к апстриму.",
+          "preset_prompt_text": "Preset-промпт",
+          "preset_prompt_text_placeholder": "например: Всегда отвечай строгим JSON.",
+          "preset_prompt_text_hint": "Обязательное поле при включенном тумблере. Клиент этого текста не видит.",
+          "preset_prompt_max_bytes": "Максимум байт",
+          "preset_prompt_max_bytes_hint": "Верхняя граница в байтах; ограничивается 262144 (256 КиБ).",
+          "upstream_concurrency_group": "Шлюз конкуренции апстрима",
+          "upstream_concurrency_group_desc": "Ограничивает одновременные запросы к апстриму. 0 — без лимита.",
+          "upstream_concurrency_default": "Дефолтный лимит",
+          "upstream_concurrency_default_hint": "Применяется к провайдерам без явной записи. 0 отключает шлюз.",
+          "upstream_concurrency_queue_timeout": "Таймаут очереди (сек)",
+          "upstream_concurrency_queue_timeout_hint": "Как долго запрос ждёт слот. При 0 включенный шлюз использует 30 с.",
+          "raw_yaml_group": "Дополнительно (сырой YAML)",
+          "raw_yaml_group_desc": "Сложные вложенные структуры редактируются в сыром YAML; PPAP по-прежнему их валидирует.",
+          "raw_yaml_api_key_controls": "Per-key API-key controls (бюджеты по запросам/токенам/стоимости, allow/deny моделей, per-key preset-промпт) редактируются в блоке api-key-controls сырого YAML.",
+          "raw_yaml_immersive_translate": "Guard Immersive Translate определяется автоматически на сервере и не имеет отдельного настраиваемого поля.",
+          "raw_yaml_log_controls": "Хранение логов настраивается в секции Logging (logs-max-total-size-mb, error-logs-max-files)."
         }
       },
       "api_keys": {

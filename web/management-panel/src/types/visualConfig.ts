@@ -143,6 +143,12 @@ export type VisualConfigValues = {
   payloadOverrideRawRules: PayloadRule[];
   payloadFilterRules: PayloadFilterRule[];
   streaming: StreamingConfig;
+  // PPAP-only backend extensions.
+  ppapPresetPromptEnabled: boolean;
+  ppapPresetPromptText: string;
+  ppapPresetPromptMaxBytes: string;
+  ppapUpstreamConcurrencyDefault: string;
+  ppapUpstreamConcurrencyQueueTimeoutSeconds: string;
 };
 
 export const makeClientId = () => {
@@ -212,4 +218,9 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     bootstrapRetries: '',
     nonstreamKeepaliveInterval: '',
   },
+  ppapPresetPromptEnabled: false,
+  ppapPresetPromptText: '',
+  ppapPresetPromptMaxBytes: '',
+  ppapUpstreamConcurrencyDefault: '',
+  ppapUpstreamConcurrencyQueueTimeoutSeconds: '',
 };

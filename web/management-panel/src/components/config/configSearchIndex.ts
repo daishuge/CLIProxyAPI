@@ -12,7 +12,8 @@ export type VisualSectionId =
   | 'quota'
   | 'streaming'
   | 'advanced'
-  | 'payload';
+  | 'payload'
+  | 'ppap';
 
 export interface ConfigFieldSearchEntry {
   /** Stable anchor id; matches FieldAnchor's `fieldId` and the rendered DOM id. */
@@ -463,6 +464,48 @@ export const CONFIG_FIELD_SEARCH_INDEX: ConfigFieldSearchEntry[] = [
     labelKey: L('sections.payload.filter_rules'),
     hintKey: L('sections.payload.filter_rules_desc'),
     keywords: ['payload', 'rule', 'filter'],
+  },
+
+  // ── ppap (PPAP-only backend extensions) ────────────────────────────────
+  {
+    fieldId: 'ppapPresetPromptEnabled',
+    sectionId: 'ppap',
+    labelKey: L('sections.ppap.preset_prompt_enabled'),
+    hintKey: L('sections.ppap.preset_prompt_enabled_hint'),
+    yamlKeys: ['preset-prompt', 'preset-prompt.enabled'],
+    keywords: ['preset', 'prompt', 'upstream', 'inject'],
+  },
+  {
+    fieldId: 'ppapPresetPromptText',
+    sectionId: 'ppap',
+    labelKey: L('sections.ppap.preset_prompt_text'),
+    hintKey: L('sections.ppap.preset_prompt_text_hint'),
+    yamlKeys: ['preset-prompt.prompt'],
+    keywords: ['preset', 'prompt', 'system'],
+  },
+  {
+    fieldId: 'ppapPresetPromptMaxBytes',
+    sectionId: 'ppap',
+    labelKey: L('sections.ppap.preset_prompt_max_bytes'),
+    hintKey: L('sections.ppap.preset_prompt_max_bytes_hint'),
+    yamlKeys: ['preset-prompt.max-bytes'],
+    keywords: ['preset', 'prompt', 'limit', 'bytes'],
+  },
+  {
+    fieldId: 'ppapUpstreamConcurrencyDefault',
+    sectionId: 'ppap',
+    labelKey: L('sections.ppap.upstream_concurrency_default'),
+    hintKey: L('sections.ppap.upstream_concurrency_default_hint'),
+    yamlKeys: ['upstream-concurrency.default'],
+    keywords: ['upstream', 'concurrency', 'gate', 'limit'],
+  },
+  {
+    fieldId: 'ppapUpstreamConcurrencyQueueTimeoutSeconds',
+    sectionId: 'ppap',
+    labelKey: L('sections.ppap.upstream_concurrency_queue_timeout'),
+    hintKey: L('sections.ppap.upstream_concurrency_queue_timeout_hint'),
+    yamlKeys: ['upstream-concurrency.queue-timeout-seconds'],
+    keywords: ['upstream', 'concurrency', 'queue', 'timeout'],
   },
 ];
 

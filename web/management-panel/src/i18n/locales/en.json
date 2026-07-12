@@ -972,6 +972,30 @@
           "override_raw_rules_desc": "Always overwrite parameter values as raw JSON fragments, useful for response_format, schemas, and other complex fields",
           "filter_rules": "Filter Rules",
           "filter_rules_desc": "Pre-filter upstream request body via JSON Path, automatically remove non-compliant/redundant parameters (Request Sanitization)"
+        },
+        "ppap": {
+          "title": "PPAP Extensions",
+          "description": "Playful Proxy API-only backend features: upstream preset prompts, provider concurrency gates, per-key API-key controls, and log retention.",
+          "preset_prompt_group": "Preset Prompt",
+          "preset_prompt_group_desc": "Inject a system-style prompt into upstream requests without leaking it back to the client.",
+          "preset_prompt_enabled": "Enable preset prompt injection",
+          "preset_prompt_enabled_hint": "When enabled, the configured prompt is spliced into upstream messages only.",
+          "preset_prompt_text": "Preset prompt",
+          "preset_prompt_text_placeholder": "e.g. Always answer in strict JSON.",
+          "preset_prompt_text_hint": "Must be set when the toggle is on. Kept out of client-visible responses.",
+          "preset_prompt_max_bytes": "Max bytes",
+          "preset_prompt_max_bytes_hint": "Upper bound in bytes; clamped to 262144 (256 KiB).",
+          "upstream_concurrency_group": "Upstream Concurrency Gate",
+          "upstream_concurrency_group_desc": "Limits concurrent upstream requests before they reach providers. 0 means unlimited.",
+          "upstream_concurrency_default": "Default limit",
+          "upstream_concurrency_default_hint": "Applies to providers without an explicit provider entry. 0 disables the gate.",
+          "upstream_concurrency_queue_timeout": "Queue timeout (seconds)",
+          "upstream_concurrency_queue_timeout_hint": "How long a request may wait for a permit. When 0, enabled gates default to 30s.",
+          "raw_yaml_group": "Advanced (raw YAML)",
+          "raw_yaml_group_desc": "Complex nested structures live in the raw YAML editor tab; PPAP still enforces them.",
+          "raw_yaml_api_key_controls": "Per-key API-key controls (rate/token/cost budgets, allow/deny models, per-key preset prompt) are edited under api-key-controls in the raw YAML editor.",
+          "raw_yaml_immersive_translate": "The Immersive Translate guard is auto-detected server-side and has no config knob; it activates only when a matching payload arrives.",
+          "raw_yaml_log_controls": "Log retention is shared with the Logging section (logs-max-total-size-mb, error-logs-max-files)."
         }
       },
       "api_keys": {
