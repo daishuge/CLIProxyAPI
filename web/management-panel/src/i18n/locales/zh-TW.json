@@ -105,7 +105,8 @@
     "plugin_store": "插件商店",
     "config_management": "設定面板",
     "logs": "記錄檢視",
-    "system_info": "中心資訊"
+    "system_info": "中心資訊",
+    "conversation_logs": "會話日誌"
   },
   "nav_groups": {
     "operate": "運行",
@@ -124,7 +125,8 @@
     "plugin_store": "探索並安裝插件",
     "logs": "請求追蹤與排查",
     "config_management": "閘道基礎設定",
-    "system_info": "運行與診斷資訊"
+    "system_info": "運行與診斷資訊",
+    "conversation_logs": "PPAP 請求/回應追蹤"
   },
   "dashboard": {
     "current_config": "目前設定",
@@ -1507,6 +1509,63 @@
     },
     "modelCatalog": {
       "notLoaded": "未載入"
+    }
+  },
+  "ppap": {
+    "conversationLogs": {
+      "title": "會話日誌",
+      "description": "檢視後端 JSONL 會話日誌中完整的請求與回應主體。列表僅顯示摘要，點擊任意列可檢視完整條目。",
+      "refresh": "重新整理",
+      "tailToggle": "追蹤最新",
+      "loadMore": "載入更多",
+      "counter": "已載入 {{count}} 條（略過 {{malformed}} 條格式異常）",
+      "disabledTitle": "會話日誌未啟用",
+      "disabledHint": "在設定面板中啟用會話日誌採集後，條目便會出現在這裡。",
+      "emptyTitle": "暫無條目",
+      "emptyHint": "當有流量經過閘道時，條目會陸續出現。",
+      "columns": {
+        "timestamp": "時間",
+        "provider": "提供者",
+        "model": "模型",
+        "status": "狀態碼",
+        "path": "路徑",
+        "hasError": "錯誤"
+      },
+      "filters": {
+        "provider": "提供者",
+        "providerPlaceholder": "例如 openai、gemini",
+        "statusCode": "狀態碼",
+        "hasError": "錯誤過濾",
+        "hasErrorAny": "全部",
+        "hasErrorYes": "僅錯誤",
+        "hasErrorNo": "僅成功"
+      },
+      "detail": {
+        "title": "會話詳情",
+        "loading": "正在載入會話條目…",
+        "errorTitle": "載入失敗",
+        "request": "請求主體",
+        "response": "回應主體",
+        "usage": "Usage",
+        "emptyBody": "空 body",
+        "fields": {
+          "requestId": "請求 ID",
+          "createdAt": "接收時間",
+          "completedAt": "完成時間",
+          "latency": "耗時",
+          "provider": "提供者",
+          "model": "模型",
+          "method": "方法",
+          "path": "路徑",
+          "upstream": "上游位址",
+          "status": "狀態碼",
+          "error": "錯誤"
+        }
+      },
+      "errors": {
+        "load": "載入會話日誌失敗",
+        "detail": "載入選取條目失敗"
+      }
     }
   }
 }

@@ -105,7 +105,8 @@
     "plugin_store": "Магазин плагинов",
     "config_management": "Панель конфигурации",
     "logs": "Просмотр логов",
-    "system_info": "Информация системы"
+    "system_info": "Информация системы",
+    "conversation_logs": "Журналы диалогов"
   },
   "nav_groups": {
     "operate": "Работа",
@@ -123,7 +124,8 @@
     "plugin_store": "Поиск и установка плагинов",
     "logs": "Трассировка запросов",
     "config_management": "Базовая конфигурация шлюза",
-    "system_info": "Состояние и диагностика"
+    "system_info": "Состояние и диагностика",
+    "conversation_logs": "PPAP: трассировка запроса/ответа"
   },
   "dashboard": {
     "current_config": "Текущая конфигурация",
@@ -1459,6 +1461,63 @@
     },
     "modelCatalog": {
       "notLoaded": "Не загружено"
+    }
+  },
+  "ppap": {
+    "conversationLogs": {
+      "title": "Журналы диалогов",
+      "description": "Просмотр полного JSONL-журнала диалогов с телами запросов и ответов. В таблице показаны только сводки; нажмите на строку для полной записи.",
+      "refresh": "Обновить",
+      "tailToggle": "Следить за новыми",
+      "loadMore": "Загрузить ещё",
+      "counter": "Загружено записей: {{count}} (пропущено некорректных строк: {{malformed}})",
+      "disabledTitle": "Логирование диалогов отключено",
+      "disabledHint": "Включите захват в конфигурации, и записи начнут поступать сюда.",
+      "emptyTitle": "Записей пока нет",
+      "emptyHint": "Записи появятся, как только через шлюз пойдёт трафик.",
+      "columns": {
+        "timestamp": "Время",
+        "provider": "Провайдер",
+        "model": "Модель",
+        "status": "Статус",
+        "path": "Путь",
+        "hasError": "Ошибка"
+      },
+      "filters": {
+        "provider": "Провайдер",
+        "providerPlaceholder": "напр. openai, gemini",
+        "statusCode": "Код статуса",
+        "hasError": "Только ошибки",
+        "hasErrorAny": "Все",
+        "hasErrorYes": "Только с ошибкой",
+        "hasErrorNo": "Только успешные"
+      },
+      "detail": {
+        "title": "Запись диалога",
+        "loading": "Загрузка записи…",
+        "errorTitle": "Не удалось загрузить запись",
+        "request": "Тело запроса",
+        "response": "Тело ответа",
+        "usage": "Usage",
+        "emptyBody": "Пустое тело",
+        "fields": {
+          "requestId": "ID запроса",
+          "createdAt": "Получено",
+          "completedAt": "Завершено",
+          "latency": "Задержка",
+          "provider": "Провайдер",
+          "model": "Модель",
+          "method": "Метод",
+          "path": "Путь",
+          "upstream": "Апстрим-URL",
+          "status": "Статус",
+          "error": "Ошибка"
+        }
+      },
+      "errors": {
+        "load": "Не удалось загрузить журналы диалогов",
+        "detail": "Не удалось загрузить выбранную запись"
+      }
     }
   }
 }

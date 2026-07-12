@@ -105,7 +105,8 @@
     "plugin_store": "Plugin Store",
     "config_management": "Config Panel",
     "logs": "Logs Viewer",
-    "system_info": "Panel Info"
+    "system_info": "Panel Info",
+    "conversation_logs": "Conversation Logs"
   },
   "nav_groups": {
     "operate": "Operate",
@@ -124,7 +125,8 @@
     "plugin_store": "Discover & install plugins",
     "logs": "Request tracing",
     "config_management": "Gateway configuration",
-    "system_info": "Runtime & diagnostics"
+    "system_info": "Runtime & diagnostics",
+    "conversation_logs": "PPAP request/response trace"
   },
   "dashboard": {
     "current_config": "Current Configuration",
@@ -1481,6 +1483,63 @@
     },
     "modelCatalog": {
       "notLoaded": "Not loaded"
+    }
+  },
+  "ppap": {
+    "conversationLogs": {
+      "title": "Conversation Logs",
+      "description": "Inspect the JSONL conversation log for full request and response bodies. Rows show only summary metadata; click any row for the full entry.",
+      "refresh": "Refresh",
+      "tailToggle": "Tail newest",
+      "loadMore": "Load more",
+      "counter": "{{count}} entries loaded ({{malformed}} malformed lines skipped)",
+      "disabledTitle": "Conversation logging disabled",
+      "disabledHint": "Enable conversation-log capture in the config panel; entries will start streaming here.",
+      "emptyTitle": "No entries yet",
+      "emptyHint": "Once traffic runs through the gateway, entries will appear here.",
+      "columns": {
+        "timestamp": "Timestamp",
+        "provider": "Provider",
+        "model": "Model",
+        "status": "Status",
+        "path": "Path",
+        "hasError": "Error"
+      },
+      "filters": {
+        "provider": "Provider",
+        "providerPlaceholder": "e.g. openai, gemini",
+        "statusCode": "Status code",
+        "hasError": "Has error",
+        "hasErrorAny": "Any",
+        "hasErrorYes": "With error only",
+        "hasErrorNo": "Success only"
+      },
+      "detail": {
+        "title": "Conversation entry",
+        "loading": "Loading conversation entry…",
+        "errorTitle": "Failed to load entry",
+        "request": "Request body",
+        "response": "Response body",
+        "usage": "Usage",
+        "emptyBody": "Empty body",
+        "fields": {
+          "requestId": "Request ID",
+          "createdAt": "Received at",
+          "completedAt": "Completed at",
+          "latency": "Latency",
+          "provider": "Provider",
+          "model": "Model",
+          "method": "Method",
+          "path": "Path",
+          "upstream": "Upstream URL",
+          "status": "Status",
+          "error": "Error"
+        }
+      },
+      "errors": {
+        "load": "Failed to load conversation logs",
+        "detail": "Failed to load the selected entry"
+      }
     }
   }
 }

@@ -105,7 +105,8 @@
     "plugin_store": "插件商店",
     "config_management": "配置面板",
     "logs": "日志查看",
-    "system_info": "中心信息"
+    "system_info": "中心信息",
+    "conversation_logs": "会话日志"
   },
   "nav_groups": {
     "operate": "运行",
@@ -124,7 +125,8 @@
     "plugin_store": "发现并安装插件",
     "logs": "请求追踪与排查",
     "config_management": "网关基础配置",
-    "system_info": "运行与诊断信息"
+    "system_info": "运行与诊断信息",
+    "conversation_logs": "PPAP 请求/响应追踪"
   },
   "dashboard": {
     "current_config": "当前配置",
@@ -1481,6 +1483,63 @@
     },
     "modelCatalog": {
       "notLoaded": "未加载"
+    }
+  },
+  "ppap": {
+    "conversationLogs": {
+      "title": "会话日志",
+      "description": "查看后端 JSONL 会话日志中完整的请求与响应体。列表仅展示摘要，点击任意行可查看完整条目。",
+      "refresh": "刷新",
+      "tailToggle": "追踪最新",
+      "loadMore": "加载更多",
+      "counter": "已加载 {{count}} 条（已跳过 {{malformed}} 条格式异常）",
+      "disabledTitle": "会话日志未启用",
+      "disabledHint": "在配置面板中开启会话日志采集后，条目会开始出现在这里。",
+      "emptyTitle": "暂无条目",
+      "emptyHint": "当有流量经过网关时，条目会陆续出现。",
+      "columns": {
+        "timestamp": "时间",
+        "provider": "提供商",
+        "model": "模型",
+        "status": "状态码",
+        "path": "路径",
+        "hasError": "错误"
+      },
+      "filters": {
+        "provider": "提供商",
+        "providerPlaceholder": "例如 openai、gemini",
+        "statusCode": "状态码",
+        "hasError": "错误过滤",
+        "hasErrorAny": "全部",
+        "hasErrorYes": "仅错误",
+        "hasErrorNo": "仅成功"
+      },
+      "detail": {
+        "title": "会话详情",
+        "loading": "正在加载会话条目…",
+        "errorTitle": "加载失败",
+        "request": "请求体",
+        "response": "响应体",
+        "usage": "Usage",
+        "emptyBody": "空 body",
+        "fields": {
+          "requestId": "请求 ID",
+          "createdAt": "接收时间",
+          "completedAt": "完成时间",
+          "latency": "耗时",
+          "provider": "提供商",
+          "model": "模型",
+          "method": "方法",
+          "path": "路径",
+          "upstream": "上游地址",
+          "status": "状态码",
+          "error": "错误"
+        }
+      },
+      "errors": {
+        "load": "加载会话日志失败",
+        "detail": "加载选中条目失败"
+      }
     }
   }
 }
