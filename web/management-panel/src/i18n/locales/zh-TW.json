@@ -146,7 +146,11 @@
     "caring_afternoon": "穩步推進中，繼續加油。",
     "caring_evening": "今天辛苦了，收尾工作做好喔。",
     "caring_night": "夜深了，別忘了早點休息。",
-    "system_overview": "系統概覽"
+    "system_overview": "系統概覽",
+    "ppap_traffic_total": "PPAP：請求總數",
+    "ppap_traffic_total_sub": "{{success}} 成功 · {{failed}} 失敗",
+    "ppap_success_rate": "PPAP：成功率",
+    "ppap_success_rate_sub": "{{count}} 個活躍 Key 組合"
   },
   "basic_settings": {
     "debug_enable": "啟用除錯模式",

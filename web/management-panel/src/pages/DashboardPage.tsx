@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,10 +6,13 @@ import {
   IconBot,
   IconFileText,
   IconSatellite,
+  IconCheckCircle2,
+  IconScrollText,
 } from '@/components/ui/icons';
 import { useAuthStore, useConfigStore, useModelsStore } from '@/stores';
 import { authFilesApi } from '@/services/api';
 import { useApiKeysForModels } from '@/hooks/useApiKeysForModels';
+import { useProviderRecentRequests } from '@/components/providers/hooks/useProviderRecentRequests';
 import { formatDateValue } from '@/utils/format';
 import { getDashboardModelsStatValue } from '@/utils/dashboard';
 import styles from './DashboardPage.module.scss';
@@ -122,6 +125,27 @@ export function DashboardPage() {
     ? Object.values(providerStats).reduce((sum, count) => sum + count, 0)
     : 0;
 
+  // PPAP-only aggregate: reuse the existing api-key-usage feed to derive
+  // total success + failure counts and an aggregate success rate. Upstream
+  // panel already consumes this endpoint for the provider status bars, but
+  // never surfaces the sum on the Dashboard.
+  const { usageByProvider } = useProviderRecentRequests({ enabled: connectionStatus === 'connected' });
+  const ppapAggregate = useMemo(() => {
+    let successTotal = 0;
+    let failedTotal = 0;
+    let activeKeyPairs = 0;
+    usageByProvider.forEach((byKey) => {
+      byKey.forEach((entry) => {
+        successTotal += entry.success;
+        failedTotal += entry.failed;
+        if (entry.success > 0 || entry.failed > 0) activeKeyPairs += 1;
+      });
+    });
+    const grandTotal = successTotal + failedTotal;
+    const successRate = grandTotal > 0 ? Math.round((successTotal / grandTotal) * 100) : null;
+    return { successTotal, failedTotal, grandTotal, activeKeyPairs, successRate };
+  }, [usageByProvider]);
+
   const quickStats: QuickStat[] = [
     {
       label: t('dashboard.management_keys'),
@@ -162,6 +186,28 @@ export function DashboardPage() {
       path: '/system',
       loading: modelsLoading,
       sublabel: t('dashboard.available_models_desc'),
+    },
+    // PPAP-specific: aggregate traffic tile pulled from /api-key-usage.
+    {
+      label: t('dashboard.ppap_traffic_total'),
+      value: ppapAggregate.grandTotal.toLocaleString(i18n.language),
+      icon: <IconScrollText size={24} />,
+      path: '/conversation-logs',
+      sublabel: t('dashboard.ppap_traffic_total_sub', {
+        success: ppapAggregate.successTotal.toLocaleString(i18n.language),
+        failed: ppapAggregate.failedTotal.toLocaleString(i18n.language),
+      }),
+    },
+    // PPAP-specific: aggregate success-rate + active provider+key pair count.
+    {
+      label: t('dashboard.ppap_success_rate'),
+      value:
+        ppapAggregate.successRate === null ? '-' : `${ppapAggregate.successRate}%`,
+      icon: <IconCheckCircle2 size={24} />,
+      path: '/ai-providers',
+      sublabel: t('dashboard.ppap_success_rate_sub', {
+        count: ppapAggregate.activeKeyPairs,
+      }),
     },
   ];
 

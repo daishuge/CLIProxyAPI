@@ -146,7 +146,11 @@
     "caring_afternoon": "稳步推进中，继续加油。",
     "caring_evening": "今天辛苦了，收尾工作做好哦。",
     "caring_night": "夜深了，别忘了早些休息。",
-    "system_overview": "系统概览"
+    "system_overview": "系统概览",
+    "ppap_traffic_total": "PPAP：请求总数",
+    "ppap_traffic_total_sub": "{{success}} 成功 · {{failed}} 失败",
+    "ppap_success_rate": "PPAP：成功率",
+    "ppap_success_rate_sub": "{{count}} 个活跃 Key 组合"
   },
   "basic_settings": {
     "debug_enable": "启用调试模式",

@@ -145,7 +145,11 @@
     "caring_afternoon": "Уверенный прогресс — отличная работа.",
     "caring_evening": "День подходит к концу — финальный рывок.",
     "caring_night": "Поздняя работа? Не забудьте отдохнуть.",
-    "system_overview": "Обзор системы"
+    "system_overview": "Обзор системы",
+    "ppap_traffic_total": "PPAP: всего запросов",
+    "ppap_traffic_total_sub": "{{success}} успех · {{failed}} ошибок",
+    "ppap_success_rate": "PPAP: доля успеха",
+    "ppap_success_rate_sub": "Активных ключевых пар: {{count}}"
   },
   "basic_settings": {
     "debug_enable": "Включить режим отладки",
