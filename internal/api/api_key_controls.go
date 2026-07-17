@@ -230,12 +230,23 @@ func estimateAPIKeyCostUSD(stats apiKeyUsageStats) float64 {
 	return total
 }
 
-// priceForAPIKeyModel resolves the price table entry for a model id, falling
-// back to a conservative price for unknown gpt-* models.
+// priceForAPIKeyModel resolves the price table entry for a model id.
+//
+// Resolution order:
+//  1. External pricing file (JSON) — exact match, then glob patterns.
+//  2. Built-in GPT/Codex price table.
+//  3. `gpt-*` prefix -> the conservative `apiKeyUnknownGPTPrice` fallback.
+//  4. Nothing (the model contributes zero to the budget).
+//
+// See api_key_pricing_external.go for how the JSON file is loaded and where
+// it is looked up. Restart the service to pick up file edits.
 func priceForAPIKeyModel(model string) (apiKeyModelPrice, bool) {
 	model = normalizeAPIKeyCostModel(model)
 	if model == "" {
 		return apiKeyModelPrice{}, false
+	}
+	if price, ok := externalPriceForModel(model); ok {
+		return price, true
 	}
 	if price, ok := apiKeyGPTModelPrices[model]; ok {
 		return price, true
