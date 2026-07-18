@@ -13,13 +13,15 @@ import { PluginStorePage } from '@/features/plugins/PluginStorePage';
 import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { SystemPage } from '@/pages/SystemPage';
+import { APIKeyControlsPage } from '@/pages/APIKeyControlsPage';
 import { useAuthStore } from '@/stores';
 
 const createMainRoutes = (supportsPlugin: boolean) => [
   { path: '/', element: <DashboardPage /> },
   { path: '/dashboard', element: <DashboardPage /> },
   { path: '/settings', element: <Navigate to="/config" replace /> },
-  { path: '/api-keys', element: <Navigate to="/config" replace /> },
+  { path: '/api-keys', element: <APIKeyControlsPage /> },
+  { path: '/api-key-controls', element: <Navigate to="/api-keys" replace /> },
   { path: '/quick-start', element: <Navigate to="/ai-providers" replace /> },
   { path: '/quick-start/*', element: <Navigate to="/ai-providers" replace /> },
   { path: '/ai-providers', element: <ProvidersWorkbenchPage /> },

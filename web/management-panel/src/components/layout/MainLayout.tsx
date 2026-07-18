@@ -539,6 +539,12 @@ export function MainLayout() {
           icon: sidebarIcons.authFiles,
         },
         {
+          path: '/api-keys',
+          labelKey: 'nav.api_key_controls',
+          metaKey: 'nav_meta.api_key_controls',
+          icon: sidebarIcons.authFiles,
+        },
+        {
           path: '/oauth',
           labelKey: 'nav.oauth',
           metaKey: 'nav_meta.oauth',

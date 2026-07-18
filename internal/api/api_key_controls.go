@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/pricing"
 	"github.com/tidwall/gjson"
 )
 
@@ -180,39 +181,13 @@ func withinAPIKeyBudget(control *config.APIKeyControl) bool {
 	return true
 }
 
-// apiKeyModelPrice captures the per-million-token USD price for a model.
-type apiKeyModelPrice struct {
-	input       float64
-	cachedInput float64
-	output      float64
-}
+// The pricing tables (built-in GPT + external JSON overrides) live in
+// internal/pricing so the management panel can consult the same source when
+// it shows per-key USD spend. Everything below is a thin adapter.
 
-// apiKeyGPTModelPrices holds the GPT/Codex per-million-token USD prices used to
-// estimate per-key spend for the MaxCostUSD budget.
-var apiKeyGPTModelPrices = map[string]apiKeyModelPrice{
-	"gpt-5.5":                    {input: 5, cachedInput: 0.5, output: 30},
-	"gpt-5.5-low-fast":           {input: 5, cachedInput: 0.5, output: 30},
-	"gpt-5.5-medium-fast":        {input: 5, cachedInput: 0.5, output: 30},
-	"gpt-5.5-high-fast":          {input: 5, cachedInput: 0.5, output: 30},
-	"gpt-5.5-xhigh-fast":         {input: 5, cachedInput: 0.5, output: 30},
-	"gpt-5.4":                    {input: 2.5, cachedInput: 0.25, output: 15},
-	"gpt-5.4-mini":               {input: 0.75, cachedInput: 0.075, output: 4.5},
-	"gpt-5.4-nano":               {input: 0.2, cachedInput: 0.02, output: 1.25},
-	"gpt-5.3-codex":              {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5.3-codex-spark":        {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5.3-codex-spark-low":    {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5.3-codex-spark-medium": {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5.3-codex-spark-high":   {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5.3-codex-spark-xhigh":  {input: 1.75, cachedInput: 0.175, output: 14},
-	"gpt-5":                      {input: 1.25, cachedInput: 0.125, output: 10},
-	"gpt-5-mini":                 {input: 0.25, cachedInput: 0.025, output: 2},
-	"gpt-5-nano":                 {input: 0.05, cachedInput: 0.005, output: 0.4},
-	"gpt-5-pro":                  {input: 15, cachedInput: 0, output: 120},
-}
-
-// apiKeyUnknownGPTPrice is the conservative fallback price for unrecognised
-// gpt-* models when estimating per-key spend.
-var apiKeyUnknownGPTPrice = apiKeyModelPrice{input: 15, cachedInput: 0, output: 120}
+// apiKeyModelPrice is an alias so signatures inside this package stay stable
+// while the actual data lives in internal/pricing.
+type apiKeyModelPrice = pricing.Price
 
 // estimateAPIKeyCostUSD sums the estimated USD spend across all priced models
 // recorded for the API key.
@@ -231,58 +206,27 @@ func estimateAPIKeyCostUSD(stats apiKeyUsageStats) float64 {
 }
 
 // priceForAPIKeyModel resolves the price table entry for a model id.
-//
-// Resolution order:
-//  1. External pricing file (JSON) — exact match, then glob patterns.
-//  2. Built-in GPT/Codex price table.
-//  3. `gpt-*` prefix -> the conservative `apiKeyUnknownGPTPrice` fallback.
-//  4. Nothing (the model contributes zero to the budget).
-//
-// See api_key_pricing_external.go for how the JSON file is loaded and where
-// it is looked up. Restart the service to pick up file edits.
+// See internal/pricing for the resolution order and how the JSON file is loaded.
 func priceForAPIKeyModel(model string) (apiKeyModelPrice, bool) {
-	model = normalizeAPIKeyCostModel(model)
-	if model == "" {
-		return apiKeyModelPrice{}, false
-	}
-	if price, ok := externalPriceForModel(model); ok {
-		return price, true
-	}
-	if price, ok := apiKeyGPTModelPrices[model]; ok {
-		return price, true
-	}
-	if strings.HasPrefix(model, "gpt-") {
-		return apiKeyUnknownGPTPrice, true
-	}
-	return apiKeyModelPrice{}, false
+	return pricing.ForModel(model)
 }
 
 // normalizeAPIKeyCostModel lower-cases and strips routing prefixes from a model
 // id so it can be matched against the price table.
 func normalizeAPIKeyCostModel(model string) string {
-	model = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(model, "models/")))
-	if idx := strings.LastIndex(model, "/"); idx >= 0 {
-		model = strings.TrimSpace(model[idx+1:])
-	}
-	return strings.TrimPrefix(model, "models/")
+	return pricing.NormalizeModelName(model)
 }
 
 // estimateTokenStatsCostUSD computes the USD cost of a single request's token
 // breakdown using the supplied per-million-token price.
 func estimateTokenStatsCostUSD(tokens apiKeyTokenStats, price apiKeyModelPrice) float64 {
-	inputTokens := clampNonNegative(tokens.InputTokens)
-	cachedTokens := clampNonNegative(tokens.CachedTokens)
-	if cachedTokens > inputTokens {
-		cachedTokens = inputTokens
-	}
-	uncachedInputTokens := inputTokens - cachedTokens
-	outputTokens := clampNonNegative(tokens.OutputTokens)
-	if outputTokens == 0 && tokens.TotalTokens > inputTokens {
-		outputTokens = tokens.TotalTokens - inputTokens
-	}
-	return (float64(uncachedInputTokens)*price.input +
-		float64(cachedTokens)*price.cachedInput +
-		float64(outputTokens)*price.output) / 1_000_000
+	return pricing.EstimateRequestCostUSD(
+		price,
+		clampNonNegative(tokens.InputTokens),
+		clampNonNegative(tokens.CachedTokens),
+		clampNonNegative(tokens.OutputTokens),
+		tokens.TotalTokens,
+	)
 }
 
 // clampNonNegative returns value or 0 when value is negative.
