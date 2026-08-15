@@ -61,11 +61,25 @@ func setCodexRequiredBool(rawJSON []byte, path string, value bool) []byte {
 func setCodexRequiredInclude(rawJSON []byte) []byte {
 	current := gjson.GetBytes(rawJSON, "include")
 	values := current.Array()
+	preserveWebSearchSources := false
+	for _, value := range values {
+		if value.Type == gjson.String && value.String() == "web_search_call.action.sources" {
+			preserveWebSearchSources = true
+			break
+		}
+	}
 	if current.IsArray() && len(values) == 1 && values[0].Type == gjson.String && values[0].String() == "reasoning.encrypted_content" {
 		return rawJSON
 	}
+	if current.IsArray() && len(values) == 2 && values[0].Type == gjson.String && values[0].String() == "reasoning.encrypted_content" && values[1].Type == gjson.String && values[1].String() == "web_search_call.action.sources" {
+		return rawJSON
+	}
 
-	updated, errSet := sjson.SetRawBytes(rawJSON, "include", []byte(`["reasoning.encrypted_content"]`))
+	include := []byte(`["reasoning.encrypted_content"]`)
+	if preserveWebSearchSources {
+		include = []byte(`["reasoning.encrypted_content","web_search_call.action.sources"]`)
+	}
+	updated, errSet := sjson.SetRawBytes(rawJSON, "include", include)
 	if errSet != nil {
 		return rawJSON
 	}

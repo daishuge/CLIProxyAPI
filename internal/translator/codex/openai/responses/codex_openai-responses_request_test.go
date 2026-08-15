@@ -293,6 +293,19 @@ func TestConvertOpenAIResponsesRequestToCodexNormalizesRequiredFields(t *testing
 	}
 }
 
+func TestConvertOpenAIResponsesRequestToCodexPreservesWebSearchSourcesInclude(t *testing.T) {
+	inputJSON := []byte(`{"model":"gpt-5.6-luna","input":"Search","include":["web_search_call.action.sources","web_search_call.action.sources","unsupported.expansion"]}`)
+
+	output := ConvertOpenAIResponsesRequestToCodex("gpt-5.6-luna", inputJSON, false)
+	include := gjson.GetBytes(output, "include").Array()
+	if len(include) != 2 {
+		t.Fatalf("include should contain exactly two supported values, got %s", gjson.GetBytes(output, "include").Raw)
+	}
+	if include[0].String() != "reasoning.encrypted_content" || include[1].String() != "web_search_call.action.sources" {
+		t.Fatalf("include = %s, want required reasoning and web-search sources", gjson.GetBytes(output, "include").Raw)
+	}
+}
+
 func TestConvertOpenAIResponsesRequestToCodex_FiltersPromptCacheRetention(t *testing.T) {
 	inputJSON := []byte(`{
 		"model": "gpt-5.6-terra",
