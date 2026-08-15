@@ -225,6 +225,30 @@ func TestConvertOpenAIResponsesRequestToCodex_OriginalIssue(t *testing.T) {
 	}
 }
 
+func TestConvertOpenAIResponsesRequestToCodex_PreservesWebSearchSourcesInclude(t *testing.T) {
+	inputJSON := []byte(`{
+		"model": "gpt-5.6-luna",
+		"input": "Search for Shanghai GDP trends.",
+		"include": [
+			"web_search_call.action.sources",
+			"web_search_call.action.sources",
+			"unsupported.expansion"
+		]
+	}`)
+
+	output := ConvertOpenAIResponsesRequestToCodex("gpt-5.6-luna", inputJSON, false)
+	include := gjson.GetBytes(output, "include").Array()
+	if len(include) != 2 {
+		t.Fatalf("include should contain exactly two supported values, got %s", gjson.GetBytes(output, "include").Raw)
+	}
+	if include[0].String() != "reasoning.encrypted_content" {
+		t.Fatalf("expected required reasoning include first, got %q", include[0].String())
+	}
+	if include[1].String() != "web_search_call.action.sources" {
+		t.Fatalf("expected web-search sources include second, got %q", include[1].String())
+	}
+}
+
 // TestConvertSystemRoleToDeveloper_AssistantRole tests that assistant role is preserved
 func TestConvertSystemRoleToDeveloper_AssistantRole(t *testing.T) {
 	inputJSON := []byte(`{
