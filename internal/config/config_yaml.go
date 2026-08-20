@@ -51,6 +51,9 @@ func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 	removeLegacyOpenAICompatAPIKeys(original.Content[0])
 	removeRemovedIntegrationKeys(original.Content[0])
 	removeLegacyGenerativeLanguageKeys(original.Content[0])
+	if len(cfg.APIKeyControls) == 0 {
+		removeMapKey(original.Content[0], "api-key-controls")
+	}
 	// Preserve the management-facing alias when it is already used on disk.
 	if findMapKeyIndex(original.Content[0], customUpstreamsConfigKey) >= 0 {
 		removeMapKey(original.Content[0], openAICompatibilityConfigKey)
