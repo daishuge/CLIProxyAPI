@@ -4,8 +4,8 @@ A single-file Web UI (React + TypeScript) for operating and troubleshooting the 
 
 [中文文档](README_CN.md)
 
-**Main Project**: https://github.com/router-for-me/CLIProxyAPI  
-**Example URL**: https://remote.router-for.me/  
+**Main Project**: https://github.com/router-for-me/CLIProxyAPI
+**Example URL**: https://remote.router-for.me/
 **Minimum Required Version**: ≥ 7.1.0 (recommended latest)
 
 Since version 6.0.19, the Web UI ships with the main program; access it via `/management.html` on the API port once the service is running.
@@ -68,7 +68,7 @@ This is different from the proxy `api-keys` you manage inside the UI (those are 
 
 ### Remote management
 
-If you connect from a non-localhost browser, the server must allow remote management (e.g. `allow-remote-management: true`).  
+If you connect from a non-localhost browser, the server must allow remote management (e.g. `allow-remote-management: true`).
 Check the CLI Proxy API server documentation/config comments for the full authentication rules, server-side limits, and edge cases.
 
 ## What you can manage (mapped to the UI pages)

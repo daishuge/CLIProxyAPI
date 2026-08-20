@@ -4,8 +4,8 @@
 
 [English](README.md)
 
-**主项目**: https://github.com/router-for-me/CLIProxyAPI  
-**示例地址**: https://remote.router-for.me/  
+**主项目**: https://github.com/router-for-me/CLIProxyAPI
+**示例地址**: https://remote.router-for.me/
 **最低版本要求**: ≥ 7.1.0（推荐最新）
 
 从6.0.19版本开始，Web UI 随主程序一起提供；服务运行后，通过 API 端口上的"/management.html"访问它。
@@ -68,7 +68,7 @@ bun run build
 
 ### 远程管理
 
-当你从非 localhost 的浏览器访问时，服务端通常需要开启远程管理（例如 `allow-remote-management: true`）。  
+当你从非 localhost 的浏览器访问时，服务端通常需要开启远程管理（例如 `allow-remote-management: true`）。
 完整鉴权规则、服务端限制与边界情况请参考 CLI Proxy API 服务端文档或配置注释。
 
 ## 功能一览（按页面对应）

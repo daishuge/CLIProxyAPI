@@ -122,4 +122,3 @@ export const buildCode0Raw = (config: Config | null | undefined): SponsorProvide
     .map((item, index) => ({ config: item, index }))
     .filter((item) => isCode0GeminiProvider(item.config)),
 });
-
