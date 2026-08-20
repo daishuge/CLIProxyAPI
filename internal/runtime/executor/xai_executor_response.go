@@ -618,7 +618,7 @@ func appendXAIReasoningSummary(previous json.RawMessage, currentSummary []gjson.
 // reasoning.effort. Capability comes from model registry thinking metadata
 // (static models.json and dynamic registrations), not a hard-coded name allowlist.
 func xaiSupportsReasoningEffort(model string) bool {
-	name := strings.ToLower(strings.TrimSpace(thinking.ParseSuffix(model).ModelName))
+	name := strings.ToLower(strings.TrimSpace(thinking.ParseSuffixForModel(model, "xai").ModelName))
 	if idx := strings.LastIndex(name, "/"); idx >= 0 {
 		name = name[idx+1:]
 	}

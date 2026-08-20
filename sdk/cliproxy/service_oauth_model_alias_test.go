@@ -34,6 +34,78 @@ func TestApplyOAuthModelAlias_Rename(t *testing.T) {
 	}
 }
 
+func TestApplyAutomaticThinkingAliases(t *testing.T) {
+	models := []*ModelInfo{
+		{
+			ID:       "gpt-5.6-sol",
+			Name:     "models/gpt-5.6-sol",
+			Thinking: &registry.ThinkingSupport{Levels: []string{"low", "medium", "high", "xhigh"}},
+		},
+	}
+
+	out := applyAutomaticThinkingAliases(models, nil)
+	ids := make(map[string]*ModelInfo, len(out))
+	for _, model := range out {
+		ids[model.ID] = model
+	}
+	for _, id := range []string{
+		"gpt-5.6-sol",
+		"gpt-5.6-sol-low",
+		"gpt-5.6-sol-medium",
+		"gpt-5.6-sol-high",
+		"gpt-5.6-sol-xhigh",
+	} {
+		if ids[id] == nil {
+			t.Fatalf("missing model alias %q in %#v", id, ids)
+		}
+	}
+	if got := ids["gpt-5.6-sol-high"].ThinkingAliasBase; got != "gpt-5.6-sol" {
+		t.Fatalf("ThinkingAliasBase = %q", got)
+	}
+	if got := ids["gpt-5.6-sol-high"].Name; got != "models/gpt-5.6-sol-high" {
+		t.Fatalf("generated model name = %q", got)
+	}
+}
+
+func TestApplyAutomaticThinkingAliases_ExplicitAliasWins(t *testing.T) {
+	models := []*ModelInfo{
+		{ID: "base", Thinking: &registry.ThinkingSupport{Levels: []string{"high"}}},
+		{ID: "base-high"},
+	}
+
+	out := applyAutomaticThinkingAliases(models, nil)
+	count := 0
+	for _, model := range out {
+		if model.ID == "base-high" {
+			count++
+			if model.ThinkingAliasBase != "" {
+				t.Fatalf("explicit alias should keep priority, got generated marker %q", model.ThinkingAliasBase)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("base-high count = %d, want 1", count)
+	}
+}
+
+func TestApplyAutomaticThinkingAliases_ExcludedAliasStaysHidden(t *testing.T) {
+	models := []*ModelInfo{
+		{ID: "base", Thinking: &registry.ThinkingSupport{Levels: []string{"low", "high"}}},
+	}
+
+	out := applyAutomaticThinkingAliases(models, []string{"*-high"})
+	ids := make(map[string]bool, len(out))
+	for _, model := range out {
+		ids[model.ID] = true
+	}
+	if !ids["base"] || !ids["base-low"] {
+		t.Fatalf("expected base and low alias, got %#v", ids)
+	}
+	if ids["base-high"] {
+		t.Fatalf("excluded generated alias was registered")
+	}
+}
+
 func TestApplyOAuthModelAlias_ForkAddsAlias(t *testing.T) {
 	cfg := &config.Config{
 		OAuthModelAlias: map[string][]config.OAuthModelAlias{
@@ -203,9 +275,9 @@ func TestApplyOAuthModelAlias_ForkAddsFixedThinkingAlias(t *testing.T) {
 		},
 	}
 
-	out := applyOAuthModelAlias(cfg, "codex", "oauth", models)
-	ids := make(map[string]*ModelInfo, len(out))
-	for _, model := range out {
+	aliased := applyOAuthModelAlias(cfg, "codex", "oauth", models)
+	ids := make(map[string]*ModelInfo, len(aliased))
+	for _, model := range aliased {
 		ids[model.ID] = model
 	}
 	// The configured "gpt-5.3-codex-spark-high" name is mapped against the base
@@ -221,6 +293,18 @@ func TestApplyOAuthModelAlias_ForkAddsFixedThinkingAlias(t *testing.T) {
 	// fork: true keeps the original base model alongside the alias.
 	if ids["gpt-5.3-codex-spark"] == nil {
 		t.Fatalf("forked base model should be preserved in %#v", ids)
+	}
+
+	out := applyAutomaticThinkingAliases(aliased, nil)
+	ids = make(map[string]*ModelInfo, len(out))
+	for _, model := range out {
+		ids[model.ID] = model
+	}
+	if ids["spark-fast-low"] != nil {
+		t.Fatalf("fixed thinking alias generated a misleading level alias")
+	}
+	if ids["gpt-5.3-codex-spark-high"] == nil {
+		t.Fatalf("missing automatic base thinking alias in %#v", ids)
 	}
 }
 

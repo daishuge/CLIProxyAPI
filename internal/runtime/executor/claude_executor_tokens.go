@@ -31,7 +31,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 		return e.countTokensUpstream(ctx, auth, req, opts)
 	}
 
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 	from := opts.SourceFormat
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 	to := sdktranslator.FromString("claude")
@@ -118,7 +118,7 @@ func shouldUseClaudeUpstreamTokenCount(apiKey, baseURL string) bool {
 
 // countTokensUpstream preserves Anthropic's native token-counting contract.
 func (e *ClaudeExecutor) countTokensUpstream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 	upstreamModel := e.upstreamModel(baseModel)
 
 	apiKey, baseURL := claudeCreds(auth)

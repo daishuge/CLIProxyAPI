@@ -651,7 +651,7 @@ func codexDirectOpenAIImageModel(req cliproxyexecutor.Request) string {
 }
 
 func codexOpenAIImageBaseModel(model string) string {
-	model = strings.TrimSpace(thinking.ParseSuffix(model).ModelName)
+	model = strings.TrimSpace(thinking.ParseSuffixForModel(model, "codex").ModelName)
 	if idx := strings.LastIndex(model, "/"); idx >= 0 && idx < len(model)-1 {
 		model = strings.TrimSpace(model[idx+1:])
 	}

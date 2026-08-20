@@ -1593,7 +1593,7 @@ func isCountTokensEndpointNotFoundError(err error, requestedModel string) bool {
 	if err == nil || statusCodeFromError(err) != http.StatusNotFound {
 		return false
 	}
-	baseModel := thinking.ParseSuffix(requestedModel).ModelName
+	baseModel := thinking.ParseSuffixForModel(requestedModel).ModelName
 	return !isExplicitModelNotFoundError(err, baseModel)
 }
 

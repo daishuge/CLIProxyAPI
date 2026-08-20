@@ -109,7 +109,7 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	}
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	token := kimiCreds(auth)
 
@@ -230,7 +230,7 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 	}
 	responseFormat := cliproxyexecutor.ResponseFormatOrSource(opts)
 
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 	token := kimiCreds(auth)
 
 	reporter := helps.NewExecutorUsageReporter(ctx, e, baseModel, auth)
@@ -829,7 +829,7 @@ func stripKimiPrefix(model string) string {
 // generic prefix stripping, so already-canonical IDs stay idempotent.
 func normalizeKimiUpstreamModel(model string) string {
 	model = strings.TrimSpace(model)
-	parsed := thinking.ParseSuffix(model)
+	parsed := thinking.ParseSuffixForModel(model, "kimi")
 	base := strings.ToLower(strings.TrimSpace(parsed.ModelName))
 	if strings.HasSuffix(base, "[1m]") {
 		base = base[:len(base)-len("[1m]")]

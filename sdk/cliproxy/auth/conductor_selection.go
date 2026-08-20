@@ -1047,7 +1047,7 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	modelKey := strings.TrimSpace(model)
 	// Always use base model name (without thinking suffix) for auth matching.
 	if modelKey != "" {
-		parsed := thinking.ParseSuffix(modelKey)
+		parsed := thinking.ParseSuffixForModel(modelKey, provider)
 		if parsed.ModelName != "" {
 			modelKey = strings.TrimSpace(parsed.ModelName)
 		}
@@ -1364,7 +1364,7 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 	modelKey := strings.TrimSpace(model)
 	// Always use base model name (without thinking suffix) for auth matching.
 	if modelKey != "" {
-		parsed := thinking.ParseSuffix(modelKey)
+		parsed := thinking.ParseSuffixForModel(modelKey)
 		if parsed.ModelName != "" {
 			modelKey = strings.TrimSpace(parsed.ModelName)
 		}

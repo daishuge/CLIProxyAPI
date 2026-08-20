@@ -107,7 +107,7 @@ func modelAliasLookupCandidates(requestedModel string) (thinking.SuffixResult, [
 	if requestedModel == "" {
 		return thinking.SuffixResult{}, nil
 	}
-	requestResult := thinking.ParseSuffix(requestedModel)
+	requestResult := thinking.ParseSuffixAllowHyphen(requestedModel)
 	base := requestResult.ModelName
 	if base == "" {
 		base = requestedModel
@@ -124,7 +124,7 @@ func preserveResolvedModelSuffix(resolved string, requestResult thinking.SuffixR
 	if resolved == "" {
 		return ""
 	}
-	if thinking.ParseSuffix(resolved).HasSuffix {
+	if thinking.ParseSuffixAllowHyphen(resolved).HasSuffix {
 		return resolved
 	}
 	if requestResult.HasSuffix && requestResult.RawSuffix != "" {
@@ -433,7 +433,7 @@ func resolveUpstreamModelFromAliasTable(m *Manager, auth *Auth, requestedModel, 
 		}
 
 		var upstreamModel string
-		if thinking.ParseSuffix(targetModel).HasSuffix {
+		if thinking.ParseSuffixAllowHyphen(targetModel).HasSuffix {
 			upstreamModel = targetModel
 		} else if requestResult.HasSuffix && requestResult.RawSuffix != "" {
 			upstreamModel = targetModel + "(" + requestResult.RawSuffix + ")"

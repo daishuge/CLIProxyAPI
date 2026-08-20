@@ -62,7 +62,7 @@ func xaiReasoningReplayScopeFromRequest(ctx context.Context, from sdktranslator.
 	sessionKey := codexReasoningReplaySessionKey(ctx, from, req, opts, body)
 	sessionKey = xaiReasoningReplayIsolateSessionKey(ctx, sessionKey)
 	return xaiReasoningReplayScope{
-		modelName:  thinking.ParseSuffix(req.Model).ModelName,
+		modelName:  thinking.ParseSuffixForModel(req.Model, "xai").ModelName,
 		sessionKey: sessionKey,
 	}
 }

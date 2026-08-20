@@ -159,7 +159,7 @@ func (h *BaseAPIHandler) providersForExecution(modelName, originalRequestedModel
 
 func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowImageModel bool) (providers []string, normalizedModel string, err *interfaces.ErrorMessage) {
 	resolvedModelName := modelName
-	initialSuffix := thinking.ParseSuffix(modelName)
+	initialSuffix := thinking.ParseSuffixAllowHyphen(modelName)
 	if initialSuffix.ModelName == "auto" {
 		if h != nil && h.AuthManager != nil && h.AuthManager.HomeEnabled() {
 			resolvedModelName = modelName
@@ -183,7 +183,7 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 		resolvedModelName = fastModel
 	}
 
-	parsed := thinking.ParseSuffix(resolvedModelName)
+	parsed := thinking.ParseSuffixForModel(resolvedModelName)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 
 	if errMsg := h.validateImageOnlyModel(baseModel, allowImageModel); errMsg != nil {
@@ -229,7 +229,7 @@ func (h *BaseAPIHandler) getRequestDetailsWithOptions(modelName string, allowIma
 }
 
 func (h *BaseAPIHandler) validateImageOnlyModel(modelName string, allowImageModel bool) *interfaces.ErrorMessage {
-	baseModel := strings.TrimSpace(thinking.ParseSuffix(modelName).ModelName)
+	baseModel := strings.TrimSpace(thinking.ParseSuffixForModel(modelName).ModelName)
 	if baseModel == "" {
 		baseModel = strings.TrimSpace(modelName)
 	}
@@ -260,7 +260,7 @@ func routeModelBaseName(model string) string {
 }
 
 func canRouteModelToProvider(modelName, provider string) bool {
-	parsed := thinking.ParseSuffixAllowHyphen(modelName)
+	parsed := thinking.ParseSuffixForModel(modelName, provider)
 	baseModel := strings.TrimSpace(parsed.ModelName)
 	for _, candidate := range util.GetProviderName(baseModel) {
 		if candidate == provider {

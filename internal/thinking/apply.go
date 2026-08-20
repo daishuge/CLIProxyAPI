@@ -220,7 +220,7 @@ func applyThinking(body, sourceBody []byte, model string, fromFormat string, toF
 	}
 
 	// 2. Parse suffix and get modelInfo
-	suffixResult := ParseSuffix(model)
+	suffixResult := ParseSuffixForModel(model, providerKey)
 	baseModel := suffixResult.ModelName
 	// Use provider-specific lookup to handle capability differences across providers.
 	modelInfo := resolvedModelInfo
@@ -560,7 +560,7 @@ func hasThinkingConfig(config ThinkingConfig) bool {
 // reasoning_effort label for usage logging. Model suffixes have the same
 // priority as ApplyThinking: a valid suffix overrides body fields.
 func ExtractReasoningEffort(body []byte, provider, model string) string {
-	if effort := reasoningEffortFromSuffix(ParseSuffix(model)); effort != "" {
+	if effort := reasoningEffortFromSuffix(ParseSuffixForModel(model, provider)); effort != "" {
 		return effort
 	}
 

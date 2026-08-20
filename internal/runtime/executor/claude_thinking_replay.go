@@ -44,7 +44,7 @@ func claudeThinkingReplayScopeFromRequest(ctx context.Context, auth *cliproxyaut
 }
 
 func claudeThinkingReplayModelFamily(auth *cliproxyauth.Auth, model string) string {
-	baseModel := thinking.ParseSuffix(strings.TrimSpace(model)).ModelName
+	baseModel := thinking.ParseSuffixForModel(strings.TrimSpace(model), "claude").ModelName
 	if baseModel == "" {
 		return ""
 	}

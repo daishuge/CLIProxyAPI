@@ -59,7 +59,7 @@ func codexReasoningReplayScopeFromRequest(ctx context.Context, from sdktranslato
 	}
 	modelName := strings.TrimSpace(gjson.GetBytes(body, "model").String())
 	if modelName == "" {
-		modelName = thinking.ParseSuffix(req.Model).ModelName
+		modelName = thinking.ParseSuffixForModel(req.Model, "codex").ModelName
 	}
 	inputItems := gjson.GetBytes(body, "input").Array()
 	return codexReasoningReplayScope{

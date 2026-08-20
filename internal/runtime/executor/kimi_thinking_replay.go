@@ -32,7 +32,7 @@ func (s kimiThinkingReplayScope) valid() bool {
 }
 
 func kimiThinkingReplayModelFamily(model string) string {
-	baseModel := thinking.ParseSuffix(strings.TrimSpace(model)).ModelName
+	baseModel := thinking.ParseSuffixForModel(strings.TrimSpace(model), "kimi").ModelName
 	normalized := normalizeKimiUpstreamModel(baseModel)
 	switch normalized {
 	case "k3", "k3-256k":

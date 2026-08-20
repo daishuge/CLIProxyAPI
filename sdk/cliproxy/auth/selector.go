@@ -184,7 +184,7 @@ func canonicalModelKey(model string) string {
 	if model == "" {
 		return ""
 	}
-	parsed := thinking.ParseSuffix(model)
+	parsed := thinking.ParseSuffixForModel(model)
 	modelName := strings.TrimSpace(parsed.ModelName)
 	if modelName == "" {
 		return model

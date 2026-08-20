@@ -100,7 +100,7 @@ func normalizeOpenAICompatibilityModelName(model string) string {
 	if model == "" {
 		return ""
 	}
-	return strings.TrimSpace(thinking.ParseSuffix(model).ModelName)
+	return strings.TrimSpace(thinking.ParseSuffixForModel(model).ModelName)
 }
 
 func flattenOpenAIToolResultContent(content gjson.Result) string {

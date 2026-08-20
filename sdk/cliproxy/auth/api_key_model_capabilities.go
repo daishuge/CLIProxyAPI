@@ -73,7 +73,7 @@ func CodexAPIKeyModelIsCompat(cfg *internalconfig.Config, auth *Auth, model stri
 	if requested == "" {
 		return false
 	}
-	baseModel := strings.TrimSpace(thinking.ParseSuffix(requested).ModelName)
+	baseModel := strings.TrimSpace(thinking.ParseSuffixForModel(requested).ModelName)
 	if baseModel == "" {
 		baseModel = requested
 	}
@@ -142,11 +142,11 @@ func lookupAPIKeyModelCapability(routing *apiKeyModelRoutingSnapshot, auth *Auth
 }
 
 func configuredUpstreamFallbackMatches(configured, selected string) bool {
-	configuredResult := thinking.ParseSuffix(strings.TrimSpace(configured))
+	configuredResult := thinking.ParseSuffixAllowHyphen(strings.TrimSpace(configured))
 	if configuredResult.HasSuffix {
 		return false
 	}
-	selectedResult := thinking.ParseSuffix(strings.TrimSpace(selected))
+	selectedResult := thinking.ParseSuffixAllowHyphen(strings.TrimSpace(selected))
 	return strings.EqualFold(strings.TrimSpace(configuredResult.ModelName), strings.TrimSpace(selectedResult.ModelName))
 }
 

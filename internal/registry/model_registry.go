@@ -81,6 +81,10 @@ type ModelInfo struct {
 	// IsCompat enables compatibility handling for this configured API-key model.
 	// It is internal metadata and is not exposed in model listings.
 	IsCompat bool `json:"-"`
+
+	// ThinkingAliasBase records the visible base model for auto-generated
+	// thinking-level aliases such as "model-high".
+	ThinkingAliasBase string `json:"-"`
 }
 
 // ModelConfig holds optional runtime overrides for a model definition.

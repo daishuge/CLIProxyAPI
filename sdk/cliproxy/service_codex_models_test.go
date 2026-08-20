@@ -28,7 +28,7 @@ func TestRegisterModelsForAuthCodexAPIKeyModels(t *testing.T) {
 		{
 			name:        "defaults without explicit models",
 			entry:       config.CodexKey{APIKey: "default-key"},
-			wantIDs:     codexModelIDSet(defaultModels),
+			wantIDs:     codexRegisteredModelIDSet(defaultModels, nil),
 			wantPresent: []string{"gpt-image-1.5", "gpt-image-2"},
 		},
 		{
@@ -48,7 +48,7 @@ func TestRegisterModelsForAuthCodexAPIKeyModels(t *testing.T) {
 				APIKey:         "excluded-key",
 				ExcludedModels: []string{excludedModelID},
 			},
-			wantIDs: codexModelIDSet(defaultModels[1:]),
+			wantIDs: codexRegisteredModelIDSet(defaultModels[1:], []string{excludedModelID}),
 		},
 	}
 
@@ -97,7 +97,7 @@ func TestRegisterModelsForAuthCodexAPIKeyModels(t *testing.T) {
 }
 
 func TestRegisterModelsForAuthCodexAPIKeyDefaultRequiresConfigMatch(t *testing.T) {
-	defaultIDs := codexModelIDSet(internalregistry.GetCodexProModels())
+	defaultIDs := codexRegisteredModelIDSet(internalregistry.GetCodexProModels(), nil)
 	tests := []struct {
 		name       string
 		config     config.Config
@@ -192,7 +192,7 @@ func TestRegisterModelsForAuthCodexAPIKeyDefaultRequiresConfigMatch(t *testing.T
 }
 
 func TestRegisterConfigAPIKeyAuthsCodexModelModes(t *testing.T) {
-	defaultIDs := codexModelIDSet(internalregistry.GetCodexProModels())
+	defaultIDs := codexRegisteredModelIDSet(internalregistry.GetCodexProModels(), nil)
 	tests := []struct {
 		name       string
 		models     []internalconfig.CodexModel
@@ -268,6 +268,10 @@ func codexModelIDSet(models []*internalregistry.ModelInfo) map[string]struct{} {
 		}
 	}
 	return ids
+}
+
+func codexRegisteredModelIDSet(models []*internalregistry.ModelInfo, excluded []string) map[string]struct{} {
+	return codexModelIDSet(applyAutomaticThinkingAliases(models, excluded))
 }
 
 func openAIModelIDSet(models []map[string]any) map[string]struct{} {

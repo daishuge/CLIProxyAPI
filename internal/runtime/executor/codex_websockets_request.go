@@ -37,7 +37,7 @@ func applyCodexPromptCacheHeadersWithContext(ctx context.Context, from sdktransl
 	if sourceFormatEqual(from, sdktranslator.FormatClaude) {
 		modelName := strings.TrimSpace(gjson.GetBytes(rawJSON, "model").String())
 		if modelName == "" {
-			modelName = thinking.ParseSuffix(req.Model).ModelName
+			modelName = thinking.ParseSuffixForModel(req.Model, "codex").ModelName
 		}
 		cached, ok, errCache := helps.ClaudeCodePromptCache(ctx, modelName, req.Payload, requestHeaders)
 		if errCache != nil {

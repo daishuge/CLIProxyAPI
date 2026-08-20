@@ -129,7 +129,7 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	if shouldExecuteNativeInteractions(auth, opts) {
 		return e.executeInteractions(ctx, auth, req, opts)
 	}
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey := geminiAPIKey(auth)
 
@@ -247,7 +247,7 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	if shouldExecuteNativeInteractions(auth, opts) {
 		return e.executeInteractionsStream(ctx, auth, req, opts)
 	}
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey := geminiAPIKey(auth)
 
@@ -388,7 +388,7 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 }
 
 func (e *GeminiExecutor) executeInteractions(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
-	targetName := thinking.ParseSuffix(req.Model).ModelName
+	targetName := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 	apiKey := geminiAPIKey(auth)
 	reporter := helps.NewExecutorUsageReporter(ctx, e, targetName, auth)
 	defer reporter.TrackFailure(ctx, &err)
@@ -468,7 +468,7 @@ func (e *GeminiExecutor) executeInteractions(ctx context.Context, auth *cliproxy
 }
 
 func (e *GeminiExecutor) executeInteractionsStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (_ *cliproxyexecutor.StreamResult, err error) {
-	targetName := thinking.ParseSuffix(req.Model).ModelName
+	targetName := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 	apiKey := geminiAPIKey(auth)
 	reporter := helps.NewExecutorUsageReporter(ctx, e, targetName, auth)
 	defer reporter.TrackFailure(ctx, &err)
@@ -622,7 +622,7 @@ func (e *GeminiExecutor) executeInteractionsStream(ctx context.Context, auth *cl
 
 // CountTokens counts tokens for the given request using the Gemini API.
 func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	baseModel := thinking.ParseSuffix(req.Model).ModelName
+	baseModel := thinking.ParseSuffixForModel(req.Model, e.Identifier()).ModelName
 
 	apiKey := geminiAPIKey(auth)
 

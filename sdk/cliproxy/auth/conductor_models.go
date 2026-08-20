@@ -33,7 +33,7 @@ func lookupAPIKeyUpstreamModel(routing *apiKeyModelRoutingSnapshot, authID, requ
 		return ""
 	}
 	keys := []string{strings.ToLower(requestedModel)}
-	baseKey := strings.ToLower(strings.TrimSpace(thinking.ParseSuffix(requestedModel).ModelName))
+	baseKey := strings.ToLower(strings.TrimSpace(thinking.ParseSuffixForModel(requestedModel).ModelName))
 	if baseKey != "" && baseKey != keys[0] {
 		keys = append(keys, baseKey)
 	}
@@ -81,7 +81,7 @@ func openAICompatProviderKey(auth *Auth) string {
 }
 
 func openAICompatModelPoolKey(auth *Auth, requestedModel string) string {
-	base := strings.TrimSpace(thinking.ParseSuffix(requestedModel).ModelName)
+	base := strings.TrimSpace(thinking.ParseSuffixAllowHyphen(requestedModel).ModelName)
 	if base == "" {
 		base = strings.TrimSpace(requestedModel)
 	}
@@ -157,7 +157,7 @@ func resolveOpenAICompatUpstreamModelPool(cfg *internalconfig.Config, auth *Auth
 }
 
 func preserveRequestedModelSuffix(requestedModel, resolved string) string {
-	return preserveResolvedModelSuffix(resolved, thinking.ParseSuffix(requestedModel))
+	return preserveResolvedModelSuffix(resolved, thinking.ParseSuffixAllowHyphen(requestedModel))
 }
 
 func (m *Manager) executionModelCandidates(auth *Auth, routeModel string) []string {
@@ -439,7 +439,7 @@ func resolveModelAliasResultForUpstream(cfg *internalconfig.Config, auth *Auth, 
 	if requestedModel == "" || upstreamModel == "" {
 		return OAuthModelAliasResult{}
 	}
-	requestResult := thinking.ParseSuffix(requestedModel)
+	requestResult := thinking.ParseSuffixAllowHyphen(requestedModel)
 	models := configuredModelAliasEntries(cfg, auth)
 	filtered := make([]modelAliasEntry, 0, 1)
 	for _, model := range models {
@@ -627,10 +627,10 @@ func compileAPIKeyModelAliasForModels[T interface {
 		}
 		// Exact suffix routes are retained alongside first-entry base fallbacks.
 		add(alias, name)
-		add(thinking.ParseSuffix(alias).ModelName, name)
+		add(thinking.ParseSuffixAllowHyphen(alias).ModelName, name)
 		// Direct upstream requests use the same exact-first lookup behavior.
 		add(name, name)
-		add(thinking.ParseSuffix(name).ModelName, name)
+		add(thinking.ParseSuffixAllowHyphen(name).ModelName, name)
 	}
 }
 
