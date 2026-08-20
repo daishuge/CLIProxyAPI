@@ -1442,6 +1442,9 @@ func removeHeadFileObject(t *testing.T, repoDir, path string) {
 	if errVerify := verifyRepositoryHead(repo); !isRepositoryCorruptionError(errVerify) {
 		t.Fatalf("verifyRepositoryHead error = %v, want repository corruption", errVerify)
 	}
+	if errClose := closeGitRepository(repo); errClose != nil {
+		t.Fatalf("close repository after object removal: %v", errClose)
+	}
 }
 
 func corruptGitRepository(t *testing.T, repoDir string) *git.Repository {

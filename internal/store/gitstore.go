@@ -217,7 +217,7 @@ func (s *GitTokenStore) ensureRepositoryLocked() error {
 				s.dirLock.Unlock()
 				return fmt.Errorf("git token store: verify repository before pull: %w", errVerify)
 			}
-			if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, nil, nil); errRecover != nil {
+			if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, repo, nil, nil); errRecover != nil {
 				s.dirLock.Unlock()
 				return fmt.Errorf("git token store: verify repository before pull: %w; recovery failed: %v", errVerify, errRecover)
 			}
@@ -282,7 +282,7 @@ func (s *GitTokenStore) ensureRepositoryLocked() error {
 						s.dirLock.Unlock()
 						return fmt.Errorf("git token store: repair index after up-to-date pull: %w", errReset)
 					}
-					if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, prePullTree, dirtyPaths); errRecover != nil {
+					if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, repo, prePullTree, dirtyPaths); errRecover != nil {
 						s.dirLock.Unlock()
 						return fmt.Errorf("git token store: repair index after up-to-date pull: %w; recovery failed: %v", errReset, errRecover)
 					}
@@ -298,7 +298,7 @@ func (s *GitTokenStore) ensureRepositoryLocked() error {
 						s.dirLock.Unlock()
 						return fmt.Errorf("git token store: reconcile remote changes: %w", errReconcile)
 					}
-					if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, prePullTree, dirtyPaths); errRecover != nil {
+					if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, repo, prePullTree, dirtyPaths); errRecover != nil {
 						s.dirLock.Unlock()
 						return fmt.Errorf("git token store: reconcile remote changes: %w; recovery failed: %v", errReconcile, errRecover)
 					}
@@ -314,7 +314,7 @@ func (s *GitTokenStore) ensureRepositoryLocked() error {
 				}
 				// Ignore missing references only when following the remote default branch.
 			case isRepositoryCorruptionError(errPull):
-				if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, prePullTree, dirtyPaths); errRecover != nil {
+				if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, repo, prePullTree, dirtyPaths); errRecover != nil {
 					s.dirLock.Unlock()
 					return fmt.Errorf("git token store: pull: %w; recovery failed: %v", errPull, errRecover)
 				}
@@ -330,7 +330,7 @@ func (s *GitTokenStore) ensureRepositoryLocked() error {
 					s.dirLock.Unlock()
 					return fmt.Errorf("git token store: verify repository after pull: %w", errVerify)
 				}
-				if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, prePullTree, dirtyPaths); errRecover != nil {
+				if errRecover := s.recoverRepositoryLocked(repoDir, authMethod, repo, prePullTree, dirtyPaths); errRecover != nil {
 					s.dirLock.Unlock()
 					return fmt.Errorf("git token store: verify repository after pull: %w; recovery failed: %v", errVerify, errRecover)
 				}
@@ -1101,7 +1101,7 @@ func applyTreePaths(tree *object.Tree, repoDir string, paths []string) error {
 	return nil
 }
 
-func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []client.Option, baselineTree *object.Tree, dirtyPaths map[string]struct{}) (errRecovery error) {
+func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []client.Option, repo *git.Repository, baselineTree *object.Tree, dirtyPaths map[string]struct{}) (errRecovery error) {
 	parentDir := filepath.Dir(repoDir)
 	recoveryRoot, errTemp := os.MkdirTemp(parentDir, ".gitstore-recovery-")
 	if errTemp != nil {
@@ -1123,7 +1123,7 @@ func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []cli
 	}()
 
 	if baselineTree == nil {
-		inspectedTree, inspectedDirtyPaths, errInspect := inspectRecoveryBaseline(repoDir)
+		inspectedTree, inspectedDirtyPaths, errInspect := inspectRecoveryBaseline(repo)
 		if errInspect != nil {
 			return fmt.Errorf("inspect recovery baseline: %w", errInspect)
 		}
@@ -1139,6 +1139,20 @@ func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []cli
 	if errClone != nil {
 		return fmt.Errorf("clone remote repository: %w", errClone)
 	}
+	clonedRepoOpen := true
+	defer func() {
+		if !clonedRepoOpen {
+			return
+		}
+		if errClose := closeGitRepository(clonedRepo); errClose != nil {
+			errCleanup := fmt.Errorf("close cloned repository: %w", errClose)
+			if errRecovery == nil {
+				errRecovery = errCleanup
+			} else {
+				errRecovery = errors.Join(errRecovery, errCleanup)
+			}
+		}
+	}()
 	if errVerify := verifyRepositoryHead(clonedRepo); errVerify != nil {
 		return fmt.Errorf("verify cloned repository: %w", errVerify)
 	}
@@ -1160,6 +1174,15 @@ func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []cli
 	}
 	if errApply := applyRecoveryLocalChanges(repoDir, cloneDir, preservedPaths); errApply != nil {
 		return fmt.Errorf("preserve local worktree changes: %w", errApply)
+	}
+	// go-git keeps packfiles memory-mapped. Windows will not rename either .git
+	// directory until both repositories release those mappings.
+	if errClose := closeGitRepository(clonedRepo); errClose != nil {
+		return fmt.Errorf("close cloned repository before recovery: %w", errClose)
+	}
+	clonedRepoOpen = false
+	if errClose := closeGitRepository(repo); errClose != nil {
+		return fmt.Errorf("close corrupt repository before recovery: %w", errClose)
 	}
 
 	backupWorktreeDir := filepath.Join(recoveryRoot, "worktree")
@@ -1191,6 +1214,9 @@ func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []cli
 	recoveredRepo, errOpen := git.PlainOpen(repoDir)
 	if errOpen == nil {
 		errOpen = verifyRepositoryHead(recoveredRepo)
+		if errClose := closeGitRepository(recoveredRepo); errOpen == nil && errClose != nil {
+			errOpen = fmt.Errorf("close recovered repository: %w", errClose)
+		}
 	}
 	if errOpen != nil {
 		errRecovered := fmt.Errorf("verify recovered repository: %w", errOpen)
@@ -1203,10 +1229,9 @@ func (s *GitTokenStore) recoverRepositoryLocked(repoDir string, authMethod []cli
 	return nil
 }
 
-func inspectRecoveryBaseline(repoDir string) (*object.Tree, map[string]struct{}, error) {
-	repo, errOpen := git.PlainOpen(repoDir)
-	if errOpen != nil {
-		return nil, nil, fmt.Errorf("open repository: %w", errOpen)
+func inspectRecoveryBaseline(repo *git.Repository) (*object.Tree, map[string]struct{}, error) {
+	if repo == nil {
+		return nil, nil, fmt.Errorf("repository is nil")
 	}
 	worktree, errWorktree := repo.Worktree()
 	if errWorktree != nil {
@@ -1229,6 +1254,17 @@ func inspectRecoveryBaseline(repoDir string) (*object.Tree, map[string]struct{},
 		return nil, nil, fmt.Errorf("inspect head tree: %w", errTree)
 	}
 	return tree, dirtyPaths, nil
+}
+
+func closeGitRepository(repo *git.Repository) error {
+	if repo == nil {
+		return nil
+	}
+	closer, ok := repo.Storer.(interface{ Close() error })
+	if !ok {
+		return nil
+	}
+	return closer.Close()
 }
 
 func recoveryPreservedPaths(baselineTree, remoteTree *object.Tree, dirtyPaths map[string]struct{}) (map[string]struct{}, error) {
