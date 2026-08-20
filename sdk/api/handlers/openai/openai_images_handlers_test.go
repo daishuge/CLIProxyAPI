@@ -485,6 +485,42 @@ func TestCollectImagesAllowsMultilineSSEData(t *testing.T) {
 	}
 }
 
+func TestCollectImagesUsesCompletedOutputItemWhenFinalResponseOmitsOutput(t *testing.T) {
+	data := make(chan []byte, 1)
+	data <- []byte("event: response.output_item.done\n" +
+		"data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2U=\",\"output_format\":\"png\"}}\n\n" +
+		"event: response.completed\n" +
+		"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1,\"output\":[]}}\n\n")
+	close(data)
+	errs := make(chan *interfaces.ErrorMessage)
+	close(errs)
+
+	out, errMsg := collectImagesFromResponsesStream(context.Background(), data, errs, "b64_json")
+	if errMsg != nil {
+		t.Fatalf("collectImagesFromResponsesStream() error = %v", errMsg.Error)
+	}
+	if !strings.Contains(string(out), `"b64_json":"aW1hZ2U="`) {
+		t.Fatalf("completed output item image response = %q", out)
+	}
+}
+
+func TestCollectImagesUsesCompletedOutputItemWhenStreamDisconnects(t *testing.T) {
+	data := make(chan []byte, 1)
+	data <- []byte("event: response.output_item.done\n" +
+		"data: {\"type\":\"response.output_item.done\",\"item\":{\"type\":\"image_generation_call\",\"partial_image_b64\":\"aW1hZ2U=\"}}\n\n")
+	close(data)
+	errs := make(chan *interfaces.ErrorMessage)
+	close(errs)
+
+	out, errMsg := collectImagesFromResponsesStream(context.Background(), data, errs, "b64_json")
+	if errMsg != nil {
+		t.Fatalf("collectImagesFromResponsesStream() error = %v", errMsg.Error)
+	}
+	if !strings.Contains(string(out), `"b64_json":"aW1hZ2U="`) {
+		t.Fatalf("disconnected output item image response = %q", out)
+	}
+}
+
 func TestSSEFrameAccumulatorKeepsMultipleFramesDistinct(t *testing.T) {
 	accumulator := &sseFrameAccumulator{}
 	first := "event: first\ndata: {\"type\":\"first\"}\n\n"
