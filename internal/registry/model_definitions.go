@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	geminiBuiltin25ProModelID     = "gemini-2.5-pro"
 	codexBuiltinImage15ModelID    = "gpt-image-1.5"
 	codexBuiltinImageModelID      = "gpt-image-2"
 	xaiBuiltinImageModelID        = "grok-imagine-image"
@@ -39,7 +40,7 @@ func GetClaudeModels() []*ModelInfo {
 
 // GetGeminiModels returns the standard Gemini model definitions.
 func GetGeminiModels() []*ModelInfo {
-	return cloneModelInfos(getModels().Gemini)
+	return WithGeminiBuiltins(cloneModelInfos(getModels().Gemini))
 }
 
 // GetGeminiVertexModels returns Gemini model definitions for Vertex AI.
@@ -119,6 +120,14 @@ func WithCodexBuiltins(models []*ModelInfo) []*ModelInfo {
 	return upsertModelInfos(models, codexBuiltinImage15ModelInfo(), codexBuiltinImageModelInfo())
 }
 
+// WithGeminiBuiltins preserves long-lived compatibility model IDs even when a
+// remote catalog refresh temporarily omits them. This is also applied to model
+// lists returned by dynamic Gemini plugins so periodic refreshes cannot remove
+// an existing public API contract.
+func WithGeminiBuiltins(models []*ModelInfo) []*ModelInfo {
+	return upsertModelInfos(models, geminiBuiltin25ProModelInfo())
+}
+
 // WithXAIBuiltins injects hard-coded xAI image/video model definitions that should
 // not depend on remote models.json updates.
 func WithXAIBuiltins(models []*ModelInfo) []*ModelInfo {
@@ -142,6 +151,30 @@ func codexBuiltinImage15ModelInfo() *ModelInfo {
 		Type:        "openai",
 		DisplayName: "GPT Image 1.5",
 		Version:     codexBuiltinImage15ModelID,
+	}
+}
+
+func geminiBuiltin25ProModelInfo() *ModelInfo {
+	return &ModelInfo{
+		ID:                         geminiBuiltin25ProModelID,
+		Object:                     "model",
+		Created:                    1750118400,
+		OwnedBy:                    "google",
+		Type:                       "gemini",
+		DisplayName:                "Gemini 2.5 Pro",
+		Name:                       "models/gemini-2.5-pro",
+		Version:                    "2.5",
+		Description:                "Stable release (June 17th, 2025) of Gemini 2.5 Pro",
+		InputTokenLimit:            1048576,
+		OutputTokenLimit:           65536,
+		SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
+		SupportedInputModalities:   []string{"text", "image", "audio", "video"},
+		SupportedOutputModalities:  []string{"text"},
+		Thinking: &ThinkingSupport{
+			Min:            128,
+			Max:            32768,
+			DynamicAllowed: true,
+		},
 	}
 }
 

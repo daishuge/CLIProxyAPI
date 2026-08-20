@@ -7,6 +7,7 @@ import (
 
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/constant"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/pluginhost"
+	"github.com/router-for-me/CLIProxyAPI/v7/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/runtime/executor"
 	"github.com/router-for-me/CLIProxyAPI/v7/internal/util"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -487,6 +488,15 @@ func (s *Service) appendPluginModels(providerKey string, models []*ModelInfo) []
 	return out
 }
 
+func withProviderBuiltins(providerKey string, models []*ModelInfo) []*ModelInfo {
+	switch strings.ToLower(strings.TrimSpace(providerKey)) {
+	case constant.Gemini, "gemini-cli":
+		return registry.WithGeminiBuiltins(models)
+	default:
+		return models
+	}
+}
+
 func (s *Service) tryRegisterPluginModelsForAuth(ctx context.Context, a *coreauth.Auth, provider, authKind string, excluded []string) bool {
 	if s == nil || s.pluginHost == nil || a == nil {
 		return false
@@ -551,7 +561,8 @@ func (s *Service) tryRegisterPluginModelsForAuth(ctx context.Context, a *coreaut
 	if ctx != nil && ctx.Err() != nil {
 		return true
 	}
-	models := applyExcludedModels(result.Models, activeExcluded)
+	models := withProviderBuiltins(providerKey, result.Models)
+	models = applyExcludedModels(models, activeExcluded)
 	models = applyOAuthModelAliasForAuth(s.cfg, providerKey, activeAuthKind, activeAuth.Attributes, models)
 	if len(models) > 0 {
 		modelsWithPrefixes := applyModelPrefixes(models, activeAuth.Prefix, s.cfg != nil && s.cfg.ForceModelPrefix)

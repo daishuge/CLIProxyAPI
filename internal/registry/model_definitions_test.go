@@ -35,6 +35,22 @@ func TestGeminiVertexModelsUseFlashLiteReleaseID(t *testing.T) {
 	t.Fatalf("Vertex models do not contain %q", releaseID)
 }
 
+func TestWithGeminiBuiltinsRestoresGemini25Pro(t *testing.T) {
+	models := WithGeminiBuiltins([]*ModelInfo{{ID: "gemini-3.7-flash"}})
+	found := false
+	for _, model := range models {
+		if model != nil && model.ID == geminiBuiltin25ProModelID {
+			found = true
+			if model.InputTokenLimit != 1048576 || model.OutputTokenLimit != 65536 {
+				t.Fatalf("gemini-2.5-pro token limits = %d/%d, want 1048576/65536", model.InputTokenLimit, model.OutputTokenLimit)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected Gemini builtin model %s", geminiBuiltin25ProModelID)
+	}
+}
+
 func TestWithXAIBuiltinsIncludesImage20(t *testing.T) {
 	models := WithXAIBuiltins(nil)
 	for _, model := range models {
